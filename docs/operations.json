@@ -1,0 +1,1980 @@
+{
+  "app": [
+    {
+      "description": "Jieli washer building list",
+      "mutating": false,
+      "name": "washer-jieli-buildings",
+      "optional": [],
+      "required": [],
+      "upstream": "thu-info-app@7930cad3f0d7243ad54df3ce4443b911113eef91 apps/thu-info-app/src/utils/{washer,webApi}.ts; calendar-export is native CLI addition"
+    },
+    {
+      "description": "Jieli washer status plus app location metadata",
+      "mutating": false,
+      "name": "washer-jieli-floors",
+      "optional": [],
+      "required": [
+        "building"
+      ],
+      "upstream": "thu-info-app@7930cad3f0d7243ad54df3ce4443b911113eef91 apps/thu-info-app/src/utils/{washer,webApi}.ts; calendar-export is native CLI addition"
+    },
+    {
+      "description": "Haile buildings near the two upstream campus coordinates",
+      "mutating": false,
+      "name": "washer-haile-buildings",
+      "optional": [],
+      "required": [],
+      "upstream": "thu-info-app@7930cad3f0d7243ad54df3ce4443b911113eef91 apps/thu-info-app/src/utils/{washer,webApi}.ts; calendar-export is native CLI addition"
+    },
+    {
+      "description": "Haile washer/dryer/shoe-washer status",
+      "mutating": false,
+      "name": "washer-haile-floors",
+      "optional": [],
+      "required": [
+        "building"
+      ],
+      "upstream": "thu-info-app@7930cad3f0d7243ad54df3ce4443b911113eef91 apps/thu-info-app/src/utils/{washer,webApi}.ts; calendar-export is native CLI addition"
+    },
+    {
+      "description": "Xiaolan building list",
+      "mutating": false,
+      "name": "washer-xiaolan-buildings",
+      "optional": [],
+      "required": [],
+      "upstream": "thu-info-app@7930cad3f0d7243ad54df3ce4443b911113eef91 apps/thu-info-app/src/utils/{washer,webApi}.ts; calendar-export is native CLI addition"
+    },
+    {
+      "description": "Xiaolan rooms and device status",
+      "mutating": false,
+      "name": "washer-xiaolan-floors",
+      "optional": [],
+      "required": [
+        "building"
+      ],
+      "upstream": "thu-info-app@7930cad3f0d7243ad54df3ce4443b911113eef91 apps/thu-info-app/src/utils/{washer,webApi}.ts; calendar-export is native CLI addition"
+    },
+    {
+      "description": "Interactive SignalR schedule transfer to another app (requires peer)",
+      "mutating": true,
+      "name": "schedule-sync-send",
+      "optional": [
+        "timeout_seconds"
+      ],
+      "required": [
+        "match_id",
+        "input"
+      ],
+      "upstream": "thu-info-app@7930cad3f0d7243ad54df3ce4443b911113eef91 apps/thu-info-app/src/utils/{washer,webApi}.ts; calendar-export is native CLI addition"
+    },
+    {
+      "description": "Interactive SignalR receive to a new local file (requires peer)",
+      "mutating": true,
+      "name": "schedule-sync-receive",
+      "optional": [
+        "timeout_seconds"
+      ],
+      "required": [
+        "match_id",
+        "output"
+      ],
+      "upstream": "thu-info-app@7930cad3f0d7243ad54df3ce4443b911113eef91 apps/thu-info-app/src/utils/{washer,webApi}.ts; calendar-export is native CLI addition"
+    },
+    {
+      "description": "Export explicit event JSON to a new RFC5545 ICS file",
+      "mutating": false,
+      "name": "calendar-export",
+      "optional": [],
+      "required": [
+        "input",
+        "output"
+      ],
+      "upstream": "thu-info-app@7930cad3f0d7243ad54df3ce4443b911113eef91 apps/thu-info-app/src/utils/{washer,webApi}.ts; calendar-export is native CLI addition"
+    },
+    {
+      "description": "Water account name/address lookup; upstream uses unencrypted HTTP",
+      "mutating": false,
+      "name": "water-user",
+      "optional": [],
+      "required": [
+        "id",
+        "allow_insecure_http"
+      ],
+      "upstream": "THU app network/water.ts:getWaterUserInformation"
+    },
+    {
+      "description": "Submit bottled-water/ticket order over upstream unencrypted HTTP; can create a paid obligation",
+      "mutating": true,
+      "name": "water-order",
+      "optional": [],
+      "required": [
+        "id",
+        "num",
+        "num1",
+        "lid",
+        "address",
+        "allow_insecure_http"
+      ],
+      "upstream": "THU app network/water.ts:postWaterSubmission"
+    },
+    {
+      "description": "Source-defined water brand identifiers",
+      "mutating": false,
+      "name": "water-brands",
+      "optional": [],
+      "required": [],
+      "upstream": "THU app network/water.ts:waterBrandIdToName"
+    },
+    {
+      "description": "Read learnX release manifest; does not install an application",
+      "mutating": false,
+      "name": "learnx-update",
+      "optional": [],
+      "required": [],
+      "upstream": "learnX src/helpers/update.ts:getLatestRelease"
+    }
+  ],
+  "learn": [
+    {
+      "description": "Name and department from the authenticated homepage",
+      "mutating": false,
+      "name": "user",
+      "optional": [
+        "role"
+      ],
+      "required": [],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Available semester identifiers",
+      "mutating": false,
+      "name": "semesters",
+      "optional": [],
+      "required": [],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Current semester dates",
+      "mutating": false,
+      "name": "current-semester",
+      "optional": [],
+      "required": [],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Courses with time/location enrichment",
+      "mutating": false,
+      "name": "courses",
+      "optional": [
+        "role",
+        "language"
+      ],
+      "required": [
+        "semester"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Course time and location",
+      "mutating": false,
+      "name": "course-location",
+      "optional": [],
+      "required": [
+        "course"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Current and expired notices with attachments",
+      "mutating": false,
+      "name": "notifications",
+      "optional": [
+        "role"
+      ],
+      "required": [
+        "course"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Notice HTML and attachment links (may mark notice read)",
+      "mutating": false,
+      "name": "notification-detail",
+      "optional": [
+        "role"
+      ],
+      "required": [
+        "course",
+        "id"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Course files and categories (upstream size limit 200)",
+      "mutating": false,
+      "name": "files",
+      "optional": [
+        "role"
+      ],
+      "required": [
+        "course"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Course file categories",
+      "mutating": false,
+      "name": "file-categories",
+      "optional": [
+        "role"
+      ],
+      "required": [
+        "course"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Files within a category",
+      "mutating": false,
+      "name": "files-by-category",
+      "optional": [
+        "role"
+      ],
+      "required": [
+        "course",
+        "category"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Download an authenticated course file to a new local file",
+      "mutating": false,
+      "name": "file-download",
+      "optional": [
+        "role"
+      ],
+      "required": [
+        "id",
+        "output"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Fetch supported file preview HTML",
+      "mutating": false,
+      "name": "file-preview",
+      "optional": [
+        "role",
+        "first_page"
+      ],
+      "required": [
+        "id",
+        "type"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "All new/submitted/graded homework with details",
+      "mutating": false,
+      "name": "homework",
+      "optional": [
+        "role"
+      ],
+      "required": [
+        "course"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Homework page, attachments and description",
+      "mutating": false,
+      "name": "homework-detail",
+      "optional": [
+        "excellent"
+      ],
+      "required": [
+        "course",
+        "id",
+        "base_id"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Excellent homework examples",
+      "mutating": false,
+      "name": "excellent-homework",
+      "optional": [],
+      "required": [
+        "course"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Submit content and optional attachment",
+      "mutating": true,
+      "name": "homework-submit",
+      "optional": [
+        "content",
+        "attachment",
+        "remove_attachment"
+      ],
+      "required": [
+        "id"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Download a homework attachment to a new local file",
+      "mutating": false,
+      "name": "homework-download",
+      "optional": [],
+      "required": [
+        "course",
+        "id",
+        "output"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Course discussion threads",
+      "mutating": false,
+      "name": "discussions",
+      "optional": [
+        "role"
+      ],
+      "required": [
+        "course"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Answered questions (all in teacher mode)",
+      "mutating": false,
+      "name": "questions",
+      "optional": [
+        "role"
+      ],
+      "required": [
+        "course"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Ongoing and ended questionnaires with questions",
+      "mutating": false,
+      "name": "questionnaires",
+      "optional": [],
+      "required": [
+        "course"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Questions and options in a questionnaire",
+      "mutating": false,
+      "name": "questionnaire-detail",
+      "optional": [],
+      "required": [
+        "course",
+        "id"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Saved content items",
+      "mutating": false,
+      "name": "favorites",
+      "optional": [
+        "course",
+        "type"
+      ],
+      "required": [],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Save a content item",
+      "mutating": true,
+      "name": "favorite-add",
+      "optional": [],
+      "required": [
+        "id",
+        "type"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Remove a saved item",
+      "mutating": true,
+      "name": "favorite-remove",
+      "optional": [],
+      "required": [
+        "id"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Pin a saved item",
+      "mutating": true,
+      "name": "favorite-pin",
+      "optional": [],
+      "required": [
+        "id"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Unpin a saved item",
+      "mutating": true,
+      "name": "favorite-unpin",
+      "optional": [],
+      "required": [
+        "id"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Personal content annotations",
+      "mutating": false,
+      "name": "comments",
+      "optional": [
+        "course",
+        "type"
+      ],
+      "required": [],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Set or clear a personal annotation",
+      "mutating": true,
+      "name": "comment-set",
+      "optional": [],
+      "required": [
+        "id",
+        "type",
+        "content"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Set course display order",
+      "mutating": true,
+      "name": "courses-sort",
+      "optional": [],
+      "required": [
+        "courses"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Registrar timetable within a date interval (maximum 29 days)",
+      "mutating": false,
+      "name": "calendar",
+      "optional": [
+        "graduate"
+      ],
+      "required": [
+        "start",
+        "end"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Read homepage language",
+      "mutating": false,
+      "name": "language",
+      "optional": [],
+      "required": [],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Set website language",
+      "mutating": true,
+      "name": "language-set",
+      "optional": [],
+      "required": [
+        "language"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Invalidate the learn.tsinghua.edu.cn session",
+      "mutating": true,
+      "name": "logout",
+      "optional": [],
+      "required": [],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Aggregate selected content for multiple course IDs",
+      "mutating": false,
+      "name": "all-contents",
+      "optional": [
+        "role"
+      ],
+      "required": [
+        "courses",
+        "type"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    },
+    {
+      "description": "Share course metadata with CourseX using your own token",
+      "mutating": true,
+      "name": "coursex-upload",
+      "optional": [],
+      "required": [
+        "courses",
+        "refresh_token"
+      ],
+      "upstream": "robertying/thu-learn-lib@1b79b984f34a6f1ca0532beaf59abac55db7f52c (coursex-upload: learnX/src/helpers/coursex.ts)"
+    }
+  ],
+  "thu": [
+    {
+      "description": "List server-side passkey registrations",
+      "mutating": false,
+      "name": "passkey.list",
+      "optional": [],
+      "required": [],
+      "upstream": "listPasskeys"
+    },
+    {
+      "description": "Delete a server-side passkey registration",
+      "mutating": true,
+      "name": "passkey.remove",
+      "optional": [],
+      "required": [
+        "credential_id"
+      ],
+      "upstream": "removePasskey"
+    },
+    {
+      "description": "Rename a server-side passkey registration",
+      "mutating": true,
+      "name": "passkey.rename",
+      "optional": [],
+      "required": [
+        "credential_id",
+        "name"
+      ],
+      "upstream": "renamePasskey"
+    },
+    {
+      "description": "List trusted ID devices",
+      "mutating": false,
+      "name": "device.list",
+      "optional": [],
+      "required": [],
+      "upstream": "getIdAuthDevices"
+    },
+    {
+      "description": "Remove a specific trusted device",
+      "mutating": true,
+      "name": "device.remove",
+      "optional": [],
+      "required": [
+        "uuid"
+      ],
+      "upstream": "forgetDevice"
+    },
+    {
+      "description": "Remove up to10 THU Info APP trusted devices until current fingerprint is no longer trusted",
+      "mutating": true,
+      "name": "device.forget-thu-info",
+      "optional": [],
+      "required": [
+        "fingerprint"
+      ],
+      "upstream": "forgetDevice"
+    },
+    {
+      "description": "Send chat messages to campus MadModel and return response without executing tool calls",
+      "mutating": true,
+      "name": "model.chat",
+      "optional": [
+        "model",
+        "temperature",
+        "tools",
+        "max_tokens"
+      ],
+      "required": [
+        "messages"
+      ],
+      "upstream": "apps/thu-info-app/src/ui/home/deepseek.tsx"
+    },
+    {
+      "description": "MadModel service access token (sensitive output)",
+      "mutating": false,
+      "name": "info.model-token",
+      "optional": [],
+      "required": [],
+      "upstream": "getMadModelToken"
+    },
+    {
+      "description": "Send school mail through Coremail",
+      "mutating": true,
+      "name": "mail.send",
+      "optional": [],
+      "required": [
+        "subject",
+        "content",
+        "recipient"
+      ],
+      "upstream": "naiveSendMail"
+    },
+    {
+      "description": "Create electricity recharge payment QR (does not complete payment)",
+      "mutating": true,
+      "name": "dorm.recharge",
+      "optional": [],
+      "required": [
+        "amount"
+      ],
+      "upstream": "getEleRechargePayCode"
+    },
+    {
+      "description": "Fetch course-registration captcha as base64 for manual solving",
+      "mutating": false,
+      "name": "course.captcha",
+      "optional": [],
+      "required": [],
+      "upstream": "getCrCaptchaUrl"
+    },
+    {
+      "description": "Available registration semesters",
+      "mutating": false,
+      "name": "course.semesters",
+      "optional": [
+        "graduate"
+      ],
+      "required": [],
+      "upstream": "getCrAvailableSemesters"
+    },
+    {
+      "description": "Personal course plan",
+      "mutating": false,
+      "name": "course.plan",
+      "optional": [
+        "graduate"
+      ],
+      "required": [
+        "semester"
+      ],
+      "upstream": "getCoursePlan"
+    },
+    {
+      "description": "Course opening information and remaining capacity",
+      "mutating": false,
+      "name": "course.search",
+      "optional": [
+        "graduate",
+        "page",
+        "id",
+        "name",
+        "day",
+        "period"
+      ],
+      "required": [
+        "semester"
+      ],
+      "upstream": "searchCrCourses"
+    },
+    {
+      "description": "Remaining course capacity",
+      "mutating": false,
+      "name": "course.remaining",
+      "optional": [
+        "graduate",
+        "page",
+        "id",
+        "name",
+        "day",
+        "period"
+      ],
+      "required": [
+        "semester"
+      ],
+      "upstream": "searchCrRemaining"
+    },
+    {
+      "description": "Course opening information",
+      "mutating": false,
+      "name": "course.open",
+      "optional": [
+        "graduate",
+        "page",
+        "id",
+        "name",
+        "day",
+        "period"
+      ],
+      "required": [
+        "semester"
+      ],
+      "upstream": "searchCrPrimaryOpen"
+    },
+    {
+      "description": "Selected courses",
+      "mutating": false,
+      "name": "course.selected",
+      "optional": [
+        "graduate"
+      ],
+      "required": [
+        "semester"
+      ],
+      "upstream": "getSelectedCourses"
+    },
+    {
+      "description": "Submit a course selection with fresh CSRF token",
+      "mutating": true,
+      "name": "course.select",
+      "optional": [
+        "graduate"
+      ],
+      "required": [
+        "semester",
+        "id",
+        "seq",
+        "priority",
+        "will"
+      ],
+      "upstream": "selectCourse"
+    },
+    {
+      "description": "Withdraw a selected course",
+      "mutating": true,
+      "name": "course.delete",
+      "optional": [
+        "graduate"
+      ],
+      "required": [
+        "semester",
+        "id",
+        "seq"
+      ],
+      "upstream": "deleteCourse"
+    },
+    {
+      "description": "Change course selection preference",
+      "mutating": true,
+      "name": "course.will",
+      "optional": [
+        "graduate"
+      ],
+      "required": [
+        "semester",
+        "id",
+        "seq",
+        "will"
+      ],
+      "upstream": "changeCourseWill"
+    },
+    {
+      "description": "Current registration stage",
+      "mutating": false,
+      "name": "course.stage",
+      "optional": [
+        "graduate"
+      ],
+      "required": [
+        "semester"
+      ],
+      "upstream": "getCrCurrentStage"
+    },
+    {
+      "description": "Course waiting queue",
+      "mutating": false,
+      "name": "course.queue",
+      "optional": [
+        "graduate"
+      ],
+      "required": [
+        "semester"
+      ],
+      "upstream": "getQueueInfo"
+    },
+    {
+      "description": "Course preference allocation stage",
+      "mutating": false,
+      "name": "course.priority-meta",
+      "optional": [
+        "graduate"
+      ],
+      "required": [
+        "semester"
+      ],
+      "upstream": "searchCoursePriorityMeta"
+    },
+    {
+      "description": "Course preference statistics",
+      "mutating": false,
+      "name": "course.priority",
+      "optional": [
+        "graduate",
+        "sports",
+        "selected",
+        "page",
+        "id",
+        "seq",
+        "name",
+        "department"
+      ],
+      "required": [
+        "semester"
+      ],
+      "upstream": "searchCoursePriorityInformation"
+    },
+    {
+      "description": "Set elective course P/F",
+      "mutating": true,
+      "name": "course.pf-set",
+      "optional": [
+        "graduate"
+      ],
+      "required": [
+        "semester",
+        "id"
+      ],
+      "upstream": "setCoursePF"
+    },
+    {
+      "description": "Cancel elective course P/F",
+      "mutating": true,
+      "name": "course.pf-cancel",
+      "optional": [
+        "graduate"
+      ],
+      "required": [
+        "semester",
+        "id"
+      ],
+      "upstream": "cancelCoursePF"
+    },
+    {
+      "description": "Registration deadlines",
+      "mutating": false,
+      "name": "course.timetable",
+      "optional": [],
+      "required": [],
+      "upstream": "getCrTimetable"
+    },
+    {
+      "description": "CR timetable as structured table rows",
+      "mutating": false,
+      "name": "course.schedule",
+      "optional": [
+        "graduate"
+      ],
+      "required": [
+        "semester"
+      ],
+      "upstream": "getCRSchedule"
+    },
+    {
+      "description": "Academic calendar current and next semesters",
+      "mutating": false,
+      "name": "calendar.semesters",
+      "optional": [],
+      "required": [],
+      "upstream": "getCalendar"
+    },
+    {
+      "description": "Academic calendar year",
+      "mutating": false,
+      "name": "calendar.year",
+      "optional": [],
+      "required": [],
+      "upstream": "getSchoolCalendarYear"
+    },
+    {
+      "description": "Academic calendar image URL",
+      "mutating": false,
+      "name": "calendar.image",
+      "optional": [
+        "lang"
+      ],
+      "required": [
+        "year",
+        "semester"
+      ],
+      "upstream": "getCalendarImageUrl"
+    },
+    {
+      "description": "Primary and secondary events for a date range",
+      "mutating": false,
+      "name": "schedule.list",
+      "optional": [
+        "graduate",
+        "first_day",
+        "semester",
+        "weeks"
+      ],
+      "required": [
+        "start",
+        "end"
+      ],
+      "upstream": "getSchedule"
+    },
+    {
+      "description": "Create a personal calendar entry",
+      "mutating": true,
+      "name": "schedule.create",
+      "optional": [
+        "location",
+        "graduate"
+      ],
+      "required": [
+        "name",
+        "date",
+        "start",
+        "end"
+      ],
+      "upstream": "saveCustomSchedule"
+    },
+    {
+      "description": "Delete personal calendar entry by ID",
+      "mutating": true,
+      "name": "schedule.delete",
+      "optional": [
+        "name",
+        "location",
+        "graduate"
+      ],
+      "required": [
+        "id"
+      ],
+      "upstream": "deleteCustomSchedule"
+    },
+    {
+      "description": "Unified ID account information",
+      "mutating": false,
+      "name": "info.user",
+      "optional": [],
+      "required": [],
+      "upstream": "getUserInfo/getIdAccountInfo"
+    },
+    {
+      "description": "Unified ID trusted devices",
+      "mutating": false,
+      "name": "info.devices",
+      "optional": [],
+      "required": [],
+      "upstream": "getIdAuthDevices"
+    },
+    {
+      "description": "Unified ID login history",
+      "mutating": false,
+      "name": "info.login-logs",
+      "optional": [
+        "page"
+      ],
+      "required": [],
+      "upstream": "getIdLoginLogs"
+    },
+    {
+      "description": "Academic grade report",
+      "mutating": false,
+      "name": "info.report",
+      "optional": [
+        "graduate",
+        "flag"
+      ],
+      "required": [],
+      "upstream": "getReport"
+    },
+    {
+      "description": "Physical exam results",
+      "mutating": false,
+      "name": "info.physical",
+      "optional": [],
+      "required": [],
+      "upstream": "getPhysicalExamResult"
+    },
+    {
+      "description": "Academic countdowns",
+      "mutating": false,
+      "name": "info.countdown",
+      "optional": [],
+      "required": [],
+      "upstream": "countdown"
+    },
+    {
+      "description": "Switch info portal language",
+      "mutating": true,
+      "name": "info.language",
+      "optional": [],
+      "required": [
+        "lang"
+      ],
+      "upstream": "switchLang"
+    },
+    {
+      "description": "Classroom building list",
+      "mutating": false,
+      "name": "classroom.list",
+      "optional": [],
+      "required": [],
+      "upstream": "getClassroomList"
+    },
+    {
+      "description": "Classroom availability",
+      "mutating": false,
+      "name": "classroom.state",
+      "optional": [],
+      "required": [
+        "building",
+        "week"
+      ],
+      "upstream": "getClassroomState"
+    },
+    {
+      "description": "Electronic invoice list",
+      "mutating": false,
+      "name": "invoice.list",
+      "optional": [
+        "page"
+      ],
+      "required": [],
+      "upstream": "getInvoiceList"
+    },
+    {
+      "description": "Electronic invoice PDF response",
+      "mutating": false,
+      "name": "invoice.pdf",
+      "optional": [],
+      "required": [
+        "uuid"
+      ],
+      "upstream": "getInvoicePDF"
+    },
+    {
+      "description": "Graduate income records",
+      "mutating": false,
+      "name": "income.graduate",
+      "optional": [
+        "page",
+        "rows"
+      ],
+      "required": [
+        "start",
+        "end"
+      ],
+      "upstream": "getGraduateIncome"
+    },
+    {
+      "description": "Bank payment records by year",
+      "mutating": false,
+      "name": "income.bank",
+      "optional": [
+        "foundation"
+      ],
+      "required": [
+        "years"
+      ],
+      "upstream": "getBankPayment/getBankPaymentParellize"
+    },
+    {
+      "description": "Degree program completion tables",
+      "mutating": false,
+      "name": "program.completion",
+      "optional": [],
+      "required": [],
+      "upstream": "getDegreeProgramCompletion"
+    },
+    {
+      "description": "Degree program list",
+      "mutating": false,
+      "name": "program.list",
+      "optional": [],
+      "required": [],
+      "upstream": "getFullDegreeProgram"
+    },
+    {
+      "description": "Full degree program tables",
+      "mutating": false,
+      "name": "program.detail",
+      "optional": [],
+      "required": [
+        "id"
+      ],
+      "upstream": "getFullDegreeProgram"
+    },
+    {
+      "description": "Course assessment forms",
+      "mutating": false,
+      "name": "assessment.list",
+      "optional": [],
+      "required": [],
+      "upstream": "getAssessmentList"
+    },
+    {
+      "description": "Read assessment form controls",
+      "mutating": false,
+      "name": "assessment.form",
+      "optional": [],
+      "required": [
+        "path"
+      ],
+      "upstream": "getAssessmentForm"
+    },
+    {
+      "description": "Submit explicit assessment form fields",
+      "mutating": true,
+      "name": "assessment.submit",
+      "optional": [],
+      "required": [
+        "fields"
+      ],
+      "upstream": "postAssessmentForm"
+    },
+    {
+      "description": "Dorm electricity balance",
+      "mutating": false,
+      "name": "dorm.electricity",
+      "optional": [],
+      "required": [],
+      "upstream": "getEleRemainder"
+    },
+    {
+      "description": "Dorm electricity payment history",
+      "mutating": false,
+      "name": "dorm.payments",
+      "optional": [],
+      "required": [],
+      "upstream": "getElePayRecord"
+    },
+    {
+      "description": "Dorm score chart URL",
+      "mutating": false,
+      "name": "dorm.score",
+      "optional": [],
+      "required": [],
+      "upstream": "getDormScore"
+    },
+    {
+      "description": "Reset dorm account password",
+      "mutating": true,
+      "name": "dorm.password",
+      "optional": [],
+      "required": [
+        "new_password"
+      ],
+      "upstream": "resetDormPassword"
+    },
+    {
+      "description": "Online network devices",
+      "mutating": false,
+      "name": "network.devices",
+      "optional": [],
+      "required": [],
+      "upstream": "getOnlineDevices"
+    },
+    {
+      "description": "Network account balance",
+      "mutating": false,
+      "name": "network.balance",
+      "optional": [],
+      "required": [],
+      "upstream": "getNetworkBalance"
+    },
+    {
+      "description": "Network account information",
+      "mutating": false,
+      "name": "network.account",
+      "optional": [],
+      "required": [],
+      "upstream": "getNetworkAccountInfo"
+    },
+    {
+      "description": "Authorize a network IP",
+      "mutating": true,
+      "name": "network.login",
+      "optional": [
+        "internet"
+      ],
+      "required": [
+        "ip",
+        "password"
+      ],
+      "upstream": "loginNetwork"
+    },
+    {
+      "description": "Disconnect a network device",
+      "mutating": true,
+      "name": "network.logout",
+      "optional": [],
+      "required": [
+        "id",
+        "mac"
+      ],
+      "upstream": "logoutNetwork"
+    },
+    {
+      "description": "Course score from THOS",
+      "mutating": false,
+      "name": "thos.score",
+      "optional": [],
+      "required": [
+        "user_id",
+        "course_id"
+      ],
+      "upstream": "getScoreByCourseId"
+    },
+    {
+      "description": "THOS service counters",
+      "mutating": false,
+      "name": "thos.counts",
+      "optional": [],
+      "required": [],
+      "upstream": "prepareThosSession"
+    },
+    {
+      "description": "THOS work items",
+      "mutating": false,
+      "name": "thos.tasks",
+      "optional": [
+        "page",
+        "size",
+        "keyword"
+      ],
+      "required": [
+        "kind"
+      ],
+      "upstream": "getThosTasks"
+    },
+    {
+      "description": "THOS service catalogue",
+      "mutating": false,
+      "name": "thos.services",
+      "optional": [
+        "page",
+        "size",
+        "keyword"
+      ],
+      "required": [],
+      "upstream": "getThosServices"
+    },
+    {
+      "description": "getNewsList",
+      "mutating": false,
+      "name": "news.list",
+      "optional": [
+        "page",
+        "length",
+        "channel"
+      ],
+      "required": [],
+      "upstream": "getNewsList"
+    },
+    {
+      "description": "searchNewsList",
+      "mutating": false,
+      "name": "news.search",
+      "optional": [
+        "page",
+        "channel_name",
+        "exact"
+      ],
+      "required": [
+        "keyword"
+      ],
+      "upstream": "searchNewsList"
+    },
+    {
+      "description": "getNewsDetail",
+      "mutating": false,
+      "name": "news.detail",
+      "optional": [
+        "id",
+        "url"
+      ],
+      "required": [],
+      "upstream": "getNewsDetail"
+    },
+    {
+      "description": "getFavorNewsList",
+      "mutating": false,
+      "name": "news.favorites",
+      "optional": [
+        "page"
+      ],
+      "required": [],
+      "upstream": "getFavorNewsList"
+    },
+    {
+      "description": "addNewsToFavor",
+      "mutating": true,
+      "name": "news.favorite-add",
+      "optional": [],
+      "required": [
+        "id"
+      ],
+      "upstream": "addNewsToFavor"
+    },
+    {
+      "description": "removeNewsFromFavor",
+      "mutating": true,
+      "name": "news.favorite-remove",
+      "optional": [],
+      "required": [
+        "id"
+      ],
+      "upstream": "removeNewsFromFavor"
+    },
+    {
+      "description": "getNewsSubscriptionList",
+      "mutating": false,
+      "name": "news.subscriptions",
+      "optional": [],
+      "required": [],
+      "upstream": "getNewsSubscriptionList"
+    },
+    {
+      "description": "getNewsSourceList",
+      "mutating": false,
+      "name": "news.sources",
+      "optional": [],
+      "required": [],
+      "upstream": "getNewsSourceList"
+    },
+    {
+      "description": "getNewsChannelList",
+      "mutating": false,
+      "name": "news.channels",
+      "optional": [],
+      "required": [],
+      "upstream": "getNewsChannelList"
+    },
+    {
+      "description": "addNewsSubscription",
+      "mutating": true,
+      "name": "news.subscription-add",
+      "optional": [
+        "channel",
+        "source",
+        "keyword"
+      ],
+      "required": [],
+      "upstream": "addNewsSubscription"
+    },
+    {
+      "description": "removeNewsSubscription",
+      "mutating": true,
+      "name": "news.subscription-remove",
+      "optional": [],
+      "required": [
+        "id"
+      ],
+      "upstream": "removeNewsSubscription"
+    },
+    {
+      "description": "getNewsListBySubscription",
+      "mutating": false,
+      "name": "news.subscribed",
+      "optional": [
+        "id",
+        "page"
+      ],
+      "required": [],
+      "upstream": "getNewsListBySubscription"
+    },
+    {
+      "description": "getNamespaces",
+      "mutating": false,
+      "name": "gitlab.namespaces",
+      "optional": [
+        "page"
+      ],
+      "required": [],
+      "upstream": "getNamespaces"
+    },
+    {
+      "description": "getRecentProjects",
+      "mutating": false,
+      "name": "gitlab.recent",
+      "optional": [
+        "page"
+      ],
+      "required": [],
+      "upstream": "getRecentProjects"
+    },
+    {
+      "description": "getPersonalProjects",
+      "mutating": false,
+      "name": "gitlab.personal",
+      "optional": [
+        "page"
+      ],
+      "required": [
+        "name"
+      ],
+      "upstream": "getPersonalProjects"
+    },
+    {
+      "description": "getStarredProjects",
+      "mutating": false,
+      "name": "gitlab.starred",
+      "optional": [
+        "page"
+      ],
+      "required": [],
+      "upstream": "getStarredProjects"
+    },
+    {
+      "description": "searchProjects",
+      "mutating": false,
+      "name": "gitlab.search",
+      "optional": [
+        "page"
+      ],
+      "required": [
+        "query"
+      ],
+      "upstream": "searchProjects"
+    },
+    {
+      "description": "getProjectDetail",
+      "mutating": false,
+      "name": "gitlab.project",
+      "optional": [],
+      "required": [
+        "id"
+      ],
+      "upstream": "getProjectDetail"
+    },
+    {
+      "description": "getProjectTree",
+      "mutating": false,
+      "name": "gitlab.tree",
+      "optional": [
+        "path",
+        "page"
+      ],
+      "required": [
+        "id",
+        "ref"
+      ],
+      "upstream": "getProjectTree"
+    },
+    {
+      "description": "getProjectBranches",
+      "mutating": false,
+      "name": "gitlab.branches",
+      "optional": [],
+      "required": [
+        "id"
+      ],
+      "upstream": "getProjectBranches"
+    },
+    {
+      "description": "getProjectFileBlob",
+      "mutating": false,
+      "name": "gitlab.blob",
+      "optional": [],
+      "required": [
+        "id",
+        "sha"
+      ],
+      "upstream": "getProjectFileBlob"
+    },
+    {
+      "description": "renderMarkdown",
+      "mutating": false,
+      "name": "gitlab.markdown",
+      "optional": [],
+      "required": [
+        "text"
+      ],
+      "upstream": "renderMarkdown"
+    },
+    {
+      "description": "getLatestAnnounces",
+      "mutating": false,
+      "name": "app.announcements",
+      "optional": [
+        "version"
+      ],
+      "required": [],
+      "upstream": "getLatestAnnounces"
+    },
+    {
+      "description": "getLatestVersion",
+      "mutating": false,
+      "name": "app.version",
+      "optional": [],
+      "required": [
+        "platform"
+      ],
+      "upstream": "getLatestVersion"
+    },
+    {
+      "description": "getFeedbackReplies",
+      "mutating": false,
+      "name": "app.feedbacks",
+      "optional": [],
+      "required": [],
+      "upstream": "getFeedbackReplies"
+    },
+    {
+      "description": "submitFeedback",
+      "mutating": true,
+      "name": "app.feedback",
+      "optional": [],
+      "required": [
+        "content",
+        "appversion",
+        "os",
+        "nickname",
+        "contact",
+        "phonemodel"
+      ],
+      "upstream": "submitFeedback"
+    },
+    {
+      "description": "getWeChatGroupQRCodeContent",
+      "mutating": false,
+      "name": "app.qrcode",
+      "optional": [],
+      "required": [],
+      "upstream": "getWeChatGroupQRCodeContent"
+    },
+    {
+      "description": "getPrivacyUrl",
+      "mutating": false,
+      "name": "app.privacy",
+      "optional": [],
+      "required": [],
+      "upstream": "getPrivacyUrl"
+    },
+    {
+      "description": "appStartupStat",
+      "mutating": true,
+      "name": "app.startup-stat",
+      "optional": [],
+      "required": [
+        "uuid"
+      ],
+      "upstream": "appStartupStat"
+    },
+    {
+      "description": "appUsageStat",
+      "mutating": true,
+      "name": "app.usage-stat",
+      "optional": [],
+      "required": [
+        "uuid",
+        "usage"
+      ],
+      "upstream": "appUsageStat"
+    },
+    {
+      "description": "List seat-booking libraries",
+      "mutating": false,
+      "name": "library.list",
+      "optional": [],
+      "required": [],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "List floors for a library",
+      "mutating": false,
+      "name": "library.floors",
+      "optional": [],
+      "required": [
+        "library_id"
+      ],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "List floor sections and availability",
+      "mutating": false,
+      "name": "library.sections",
+      "optional": [
+        "date"
+      ],
+      "required": [
+        "floor_id"
+      ],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "Available reservation dates and segments",
+      "mutating": false,
+      "name": "library.days",
+      "optional": [],
+      "required": [
+        "section_id"
+      ],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "Seat availability for a section/date",
+      "mutating": false,
+      "name": "library.seats",
+      "optional": [
+        "date",
+        "start_time",
+        "end_time"
+      ],
+      "required": [
+        "section_id"
+      ],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "Book one seat using a fetched access token",
+      "mutating": true,
+      "name": "library.book",
+      "optional": [
+        "date"
+      ],
+      "required": [
+        "seat_id",
+        "section_id",
+        "user_id",
+        "type"
+      ],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "List own seat reservations",
+      "mutating": false,
+      "name": "library.records",
+      "optional": [],
+      "required": [],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "Cancel a seat reservation",
+      "mutating": true,
+      "name": "library.cancel",
+      "optional": [],
+      "required": [
+        "id",
+        "user_id"
+      ],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "Crowdsourced seat socket status",
+      "mutating": false,
+      "name": "library.socket-status",
+      "optional": [],
+      "required": [
+        "section_id"
+      ],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "Update crowdsourced socket availability",
+      "mutating": true,
+      "name": "library.socket-update",
+      "optional": [],
+      "required": [
+        "seat_id",
+        "available"
+      ],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "Current CAB room-booking account",
+      "mutating": false,
+      "name": "library.room-user",
+      "optional": [],
+      "required": [],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "Room kinds and devices",
+      "mutating": false,
+      "name": "library.room-list",
+      "optional": [],
+      "required": [],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "Room availability and rules",
+      "mutating": false,
+      "name": "library.room-resources",
+      "optional": [],
+      "required": [
+        "date",
+        "kind_id"
+      ],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "Find member account IDs",
+      "mutating": false,
+      "name": "library.room-members",
+      "optional": [],
+      "required": [
+        "keyword"
+      ],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "Book room with explicit member account IDs",
+      "mutating": true,
+      "name": "library.room-book",
+      "optional": [],
+      "required": [
+        "device_id",
+        "start",
+        "end",
+        "members"
+      ],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "Own room bookings in date range",
+      "mutating": false,
+      "name": "library.room-records",
+      "optional": [],
+      "required": [
+        "begin",
+        "end"
+      ],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "Cancel a room booking",
+      "mutating": true,
+      "name": "library.room-cancel",
+      "optional": [],
+      "required": [
+        "uuid"
+      ],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "Update room booking email",
+      "mutating": true,
+      "name": "library.room-email",
+      "optional": [],
+      "required": [
+        "email"
+      ],
+      "upstream": "thu-info-lib/src/lib/library.ts"
+    },
+    {
+      "description": "Known venue and item IDs from upstream",
+      "mutating": false,
+      "name": "sports.venues",
+      "optional": [],
+      "required": [],
+      "upstream": "thu-info-lib/src/lib/sports.ts"
+    },
+    {
+      "description": "Get resource hashes, costs and reservation limits",
+      "mutating": false,
+      "name": "sports.resources",
+      "optional": [],
+      "required": [
+        "gym_id",
+        "item_id",
+        "date"
+      ],
+      "upstream": "thu-info-lib/src/lib/sports.ts"
+    },
+    {
+      "description": "Current reservation phone",
+      "mutating": false,
+      "name": "sports.phone",
+      "optional": [],
+      "required": [],
+      "upstream": "thu-info-lib/src/lib/sports.ts"
+    },
+    {
+      "description": "Set reservation contact phone",
+      "mutating": true,
+      "name": "sports.phone-update",
+      "optional": [],
+      "required": [
+        "phone",
+        "user_id"
+      ],
+      "upstream": "thu-info-lib/src/lib/sports.ts"
+    },
+    {
+      "description": "Captcha image URL to download with same session",
+      "mutating": false,
+      "name": "sports.captcha",
+      "optional": [],
+      "required": [],
+      "upstream": "thu-info-lib/src/lib/sports.ts"
+    },
+    {
+      "description": "Paid and unpaid sports reservations",
+      "mutating": false,
+      "name": "sports.records",
+      "optional": [],
+      "required": [],
+      "upstream": "thu-info-lib/src/lib/sports.ts"
+    },
+    {
+      "description": "Create a sports reservation; never auto-pay",
+      "mutating": true,
+      "name": "sports.book",
+      "optional": [],
+      "required": [
+        "total_cost",
+        "phone",
+        "gym_id",
+        "item_id",
+        "date",
+        "captcha",
+        "resource_hash"
+      ],
+      "upstream": "thu-info-lib/src/lib/sports.ts"
+    },
+    {
+      "description": "Cancel a sports booking",
+      "mutating": true,
+      "name": "sports.cancel",
+      "optional": [],
+      "required": [
+        "book_id"
+      ],
+      "upstream": "thu-info-lib/src/lib/sports.ts"
+    },
+    {
+      "description": "Prepare payment form for manual continuation; does not pay",
+      "mutating": true,
+      "name": "sports.payment-start",
+      "optional": [
+        "receipt_title"
+      ],
+      "required": [
+        "pay_id"
+      ],
+      "upstream": "thu-info-lib/src/lib/sports.ts"
+    },
+    {
+      "description": "Create Alipay QR payment handoff for an existing reservation; does not pay",
+      "mutating": true,
+      "name": "sports.payment-qr",
+      "optional": [
+        "receipt_title"
+      ],
+      "required": [
+        "pay_id"
+      ],
+      "upstream": "thu-info-lib/src/lib/sports.ts"
+    },
+    {
+      "description": "Current card service account",
+      "mutating": false,
+      "name": "card.user",
+      "optional": [],
+      "required": [],
+      "upstream": "thu-info-lib/src/lib/card.ts"
+    },
+    {
+      "description": "Card identity, balance and transaction limits in yuan",
+      "mutating": false,
+      "name": "card.info",
+      "optional": [
+        "raw"
+      ],
+      "required": [],
+      "upstream": "thu-info-lib/src/lib/card.ts"
+    },
+    {
+      "description": "Authenticated photo URL",
+      "mutating": false,
+      "name": "card.photo",
+      "optional": [],
+      "required": [],
+      "upstream": "thu-info-lib/src/lib/card.ts"
+    },
+    {
+      "description": "Transaction page; amounts normalized to yuan",
+      "mutating": false,
+      "name": "card.transactions",
+      "optional": [
+        "type",
+        "page",
+        "page_size"
+      ],
+      "required": [
+        "start",
+        "end"
+      ],
+      "upstream": "thu-info-lib/src/lib/card.ts"
+    },
+    {
+      "description": "Change transaction password",
+      "mutating": true,
+      "name": "card.password-change",
+      "optional": [],
+      "required": [
+        "old_password",
+        "new_password"
+      ],
+      "upstream": "thu-info-lib/src/lib/card.ts"
+    },
+    {
+      "description": "Set card maxconsamt and maxconstolamt explicitly in cents",
+      "mutating": true,
+      "name": "card.limits",
+      "optional": [],
+      "required": [
+        "transaction_password",
+        "maxconsamt_cents",
+        "maxconstolamt_cents"
+      ],
+      "upstream": "thu-info-lib/src/lib/card.ts"
+    },
+    {
+      "description": "Report card loss",
+      "mutating": true,
+      "name": "card.report-loss",
+      "optional": [],
+      "required": [
+        "transaction_password"
+      ],
+      "upstream": "thu-info-lib/src/lib/card.ts"
+    },
+    {
+      "description": "Cancel card loss report",
+      "mutating": true,
+      "name": "card.cancel-loss",
+      "optional": [],
+      "required": [
+        "transaction_password"
+      ],
+      "upstream": "thu-info-lib/src/lib/card.ts"
+    },
+    {
+      "description": "Check upstream card API compatibility",
+      "mutating": false,
+      "name": "card.recharge-supported",
+      "optional": [],
+      "required": [],
+      "upstream": "thu-info-lib/src/lib/card.ts"
+    },
+    {
+      "description": "Transfer funds from bound bank to campus card",
+      "mutating": true,
+      "name": "card.recharge-bank",
+      "optional": [],
+      "required": [
+        "amount"
+      ],
+      "upstream": "thu-info-lib/src/lib/card.ts"
+    },
+    {
+      "description": "Create WeChat/Alipay recharge QR handoff; no payment completion",
+      "mutating": true,
+      "name": "card.recharge-qr",
+      "optional": [],
+      "required": [
+        "amount",
+        "provider"
+      ],
+      "upstream": "thu-info-lib/src/lib/card.ts"
+    }
+  ]
+}

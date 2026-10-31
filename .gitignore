@@ -1,0 +1,16 @@
+/target/
+/dist/
+/thu-cli
+*.cookies.json
+session.json
+.env
+*.log
+*.tmp
+.DS_Store
+*.key
+*.pem
+*.p12
+*.pfx
+*.cookies
+*.session
+!Cargo.lock

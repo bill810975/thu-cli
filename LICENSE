@@ -1,0 +1,15 @@
+Copyright (c) 2026 Contributors to thu-cli
+
+This repository is a derived interoperability implementation. The upstream
+notices under licenses/ must be retained. No claim is made that the entire
+combined work is MIT or another unrestricted open-source license.
+
+THU Info-derived source remains subject to the upstream Business Source License
+1.1 terms, including its Additional Use Grant, Change Date and Change License.
+learnX notices include an additional institutional-use restriction.
+thu-learn-lib is MIT. See docs/LICENSING.md for provenance and deployment
+cautions.
+
+Original standalone glue code in this repository is provided under the MIT terms
+in licenses/original-glue-MIT.txt, without removing any upstream restrictions
+applicable to translated or derived code.

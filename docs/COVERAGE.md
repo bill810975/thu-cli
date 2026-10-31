@@ -1,0 +1,47 @@
+# Coverage and boundaries
+
+## What is integrated
+
+These repositories are primarily clients and protocol libraries for campus systems. This package does not deploy their backend servers. It ports the relevant client calls into native Rust and exposes them through `thu`, `learn`, and `app` namespaces.
+
+The exact generated operation catalog is `operations.json` and can always be reproduced with `thu-cli services`. Each operation includes its mutation classification and required/optional argument names. This is not a claim that each upstream mobile return model is reproduced byte-for-byte.
+
+- THU Info: academic records, teaching assessment, available classrooms, calendar and custom schedules, course registration/query/drop/PF/priority, library seats/rooms, sports booking/payment QR, campus card, dorm electricity, income/invoices, news, network devices, campus GitLab, THOS, campus mail, model token/chat, app feedback/announcements, server-side passkey/device management.
+- Learn: semesters, student/teacher views, courses, notifications, file categories/downloads/previews, homework details/submission, discussion/question/questionnaire reads, favorites/comments, course order, language, registrar calendar, CourseX metadata sharing.
+- App-only: three washer providers, SignalR schedule pairing/transfer, water account/order APIs and update manifest. RFC5545 ICS export is an additional CLI utility.
+
+## Detailed inventory
+
+`thu-public-api-matrix.md` accounts for all 149 explicitly public InfoHelper members in the pinned snapshot, including state fields, aliases and obsolete functions. Counts of class members are not counts of independent microservices. `thu-coverage.md`, `reservations.md`, `card.md`, and `learn-coverage.md` describe implementation details and input/output differences.
+
+## Live verification boundary
+
+Native HTTP requests, forms, encryption, parsers, cookie lifecycles and error
+branches have unit/mock coverage. One live account and campus network have also
+been tested for direct Info and Learn authentication, persistent session
+refresh, Info news reads, Learn semester/course reads and homework reads.
+
+That evidence does not establish every authorization role, enrollment quota,
+MFA/CAPTCHA mode, write operation or production response. Untested functionality
+remains unverified even where its complete source protocol is ported.
+
+## Partial or intentionally different behavior
+
+- Ordinary username/password and MFA authentication is native. With explicit
+  `--trust-device`, the CLI requests a trusted-browser session and can register
+  its stable fingerprint after successful interactive 2FA. Browser/platform
+  passkey creation, signing and passkey-only login are not implemented.
+  Server-side passkey listing/removal/renaming is separate and available.
+- CAPTCHA-image challenges are not automatically solved. A user can complete a browser challenge and import their own protected Netscape cookie export.
+- Some THU academic/financial/course pages return structured table rows or raw service fields, not the mobile UI's exact localized model. Compare detail documentation before wiring automated downstream calculations.
+- Schedule expansion needs explicit semester/first-day context for secondary/summer information. Incomplete context is reported rather than silently claiming a complete timetable.
+- Upstream Learn endpoints with a 200-item request cap remain capped; no unsupported pagination protocol was invented.
+- MadModel chat uses non-streaming completion and does not execute model tool calls. Mobile voice, React Native screens/widgets, background notifications, local cache/favorites UI and platform attachment sharing are not server microservices and are not reproduced.
+- CourseX sharing requires the user's own refresh token. No embedded mobile credentials are copied into the CLI.
+- Payments return preparation/QR data; the CLI does not operate a payment wallet or complete payment approval. Water ordering is a separate legacy HTTP operation and can create an obligation.
+- Local `logout` clears local cookies, not every server session. `learn logout --confirm` invokes Learn's remote logout.
+- A failed or timed-out write may already have reached the server. There is no automatic retry of a transaction.
+
+## Safe starting point
+
+Begin with `services`, `describe`, `login`, then read-only course/calendar/account queries. Use `--dry-run` before write operations. Keep credentials and real outputs outside this archive. Report an upstream error together with the operation name and redacted shape, not cookies, password, MFA code or complete token-bearing URLs.

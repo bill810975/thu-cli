@@ -1,0 +1,3 @@
+interface:
+  display_name: "Tsinghua Campus CLI"
+  short_description: "Use thu-cli for private Info and Learn workflows"
