@@ -1,5 +1,7 @@
 # thu-cli
 
+[English](README.md) | [中文](README.zh-CN.md)
+
 Native Rust command-line clients for authenticated Tsinghua campus and Learn
 services.
 
@@ -68,6 +70,11 @@ cargo clippy --locked --all-targets -- -D warnings
 The release binary is written to `target/release/thu-cli`.
 
 ## Install
+
+Prebuilt archives for Linux, macOS, and Windows are available on the
+[releases page](https://github.com/bill810975/thu-cli/releases). Download the
+archive for your platform, verify it against `SHA256SUMS`, unpack it, and put
+`thu-cli` (or `thu-cli.exe` on Windows) on `PATH`.
 
 ### Install from the clone
 
