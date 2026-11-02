@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, mmw1, thu-cli]
     steps:
       - uses: actions/checkout@v5
       - name: Install pinned toolchain
@@ -30,7 +30,7 @@ jobs:
 
   build-linux:
     needs: verify
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, linux, x64, mmw1, thu-cli]
     steps:
       - uses: actions/checkout@v5
       - name: Install pinned toolchain
@@ -118,7 +118,7 @@ jobs:
       - build-linux
       - build-windows
       - build-macos
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, mmw1, thu-cli]
     permissions:
       contents: write
     steps:
