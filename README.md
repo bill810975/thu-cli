@@ -24,6 +24,10 @@ These are source references, not endorsements by the upstream projects.
 > terms. Read [docs/LICENSING.md](docs/LICENSING.md) and the notices in
 > [`licenses/`](licenses/) before redistribution or production use.
 
+## Quick Start
+For an agent-driven installation, give an agent the prompt in
+[prompts/install-thu-cli.md](prompts/install-thu-cli.md).
+
 ## Features
 
 - Direct campus and WebVPN-aware Tsinghua Info authentication.

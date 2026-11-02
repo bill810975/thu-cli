@@ -23,6 +23,11 @@ Node.js、Python 或移动端应用。
 > 环境使用前，请阅读 [docs/LICENSING.md](docs/LICENSING.md) 和
 > [`licenses/`](licenses/) 中的上游许可文本。
 
+## Quick Start
+若希望让 agent 自动完成 clone、构建和安装，可以直接把
+[prompts/install-thu-cli.md](prompts/install-thu-cli.md) 中的 prompt 交给
+agent。
+
 ## 功能
 
 - 直连校园网或通过 WebVPN 完成清华 Info 认证。
