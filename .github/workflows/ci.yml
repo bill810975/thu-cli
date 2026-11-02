@@ -10,7 +10,10 @@ permissions:
 
 jobs:
   test:
-    runs-on: [self-hosted, linux, x64, mmw1, thu-cli]
+    # Never execute code from an external fork on the persistent self-hosted runner.
+    # Same-repository branches and pushes use mmw1; external PRs use an ephemeral
+    # GitHub-hosted runner.
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || fromJSON('["self-hosted", "linux", "x64", "mmw1", "thu-cli"]') }}
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
