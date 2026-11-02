@@ -141,10 +141,13 @@ jobs:
           GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
+          shopt -s nullglob
+          files=(dist/*.tar.gz dist/*.zip dist/SHA256SUMS)
+          test "${#files[@]}" -eq 4
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+            gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
           else
-            gh release create "$GITHUB_REF_NAME" dist/* \
+            gh release create "$GITHUB_REF_NAME" "${files[@]}" \
               --verify-tag \
               --generate-notes \
               --title "thu-cli $GITHUB_REF_NAME"
