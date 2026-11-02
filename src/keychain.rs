@@ -1,7 +1,11 @@
-use anyhow::{bail, Context, Result};
+#[cfg(target_os = "macos")]
+use anyhow::Context;
+use anyhow::{bail, Result};
+#[cfg(target_os = "macos")]
 use std::process::Stdio;
 use zeroize::Zeroizing;
 
+#[cfg(target_os = "macos")]
 const SECURITY: &str = "/usr/bin/security";
 pub const KEYCHAIN_SERVICE: &str = "io.github.bill810975.thu-cli";
 

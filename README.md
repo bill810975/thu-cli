@@ -9,6 +9,15 @@ The CLI implements login, SM2 password encryption, Cookie persistence, SSO
 roaming, JSON/HTML/table parsing, and service-specific safety checks in Rust.
 It does not require Node.js, Python, or the mobile apps at runtime.
 
+The implementation and compatibility work build on two upstream projects:
+
+- [THU Info](https://github.com/thu-info-community/thu-info-app), particularly
+  `thu-info-lib`, for campus-service protocols and behavior.
+- [learnX](https://github.com/robertying/learnX), together with its
+  `thu-learn-lib` dependency, for Learn protocol coverage and app workflows.
+
+These are source references, not endorsements by the upstream projects.
+
 > **License boundary:** this repository is source-available, not an OSI
 > open-source distribution at this time. Portions are derived from THU Info
 > under the Business Source License 1.1 and from learnX under its modified MIT
@@ -75,6 +84,12 @@ Prebuilt archives for Linux, macOS, and Windows are available on the
 [releases page](https://github.com/bill810975/thu-cli/releases). Download the
 archive for your platform, verify it against `SHA256SUMS`, unpack it, and put
 `thu-cli` (or `thu-cli.exe` on Windows) on `PATH`.
+
+Release targets:
+
+- macOS universal (`x86_64` and Apple Silicon)
+- Windows `x86_64`
+- Linux `x86_64`; the same binary can run in WSL
 
 ### Install from the clone
 

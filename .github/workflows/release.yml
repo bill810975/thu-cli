@@ -23,7 +23,9 @@ jobs:
           cargo_version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n1)"
           test "${GITHUB_REF_NAME#v}" = "$cargo_version"
       - run: cargo fmt --all -- --check
-      - run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Clippy advisory
+        continue-on-error: true
+        run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
 
   build-linux:

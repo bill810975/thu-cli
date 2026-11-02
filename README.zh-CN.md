@@ -8,6 +8,15 @@
 JSON/HTML/表格解析，以及针对服务操作的安全检查。运行时不依赖
 Node.js、Python 或移动端应用。
 
+本项目的实现与兼容性工作建立在这两个上游项目之上：
+
+- [THU Info](https://github.com/thu-info-community/thu-info-app)，尤其是
+  `thu-info-lib` 中的校园服务协议与行为；
+- [learnX](https://github.com/robertying/learnX) 及其依赖
+  `thu-learn-lib`，用于参考 Learn 协议覆盖和应用工作流。
+
+以上引用只说明来源，不代表上游项目对本项目背书。
+
 > **许可证边界：** 本仓库目前是 source-available（源码可见），不是
 > OSI 定义的开源发行版。仓库中包含由 THU Info 派生、受 Business Source
 > License 1.1 约束的代码，也包含 learnX 的修改版 MIT 条款。分发或在生产
@@ -73,6 +82,12 @@ Linux、macOS 和 Windows 的预编译包发布在
 [Releases](https://github.com/bill810975/thu-cli/releases) 页面。下载对应
 平台的压缩包后，可先用同页面的 `SHA256SUMS` 校验，再解压并将 `thu-cli`
 （Windows 下为 `thu-cli.exe`）放入 `PATH`。
+
+发布目标：
+
+- macOS universal（同时支持 `x86_64` 与 Apple Silicon）
+- Windows `x86_64`
+- Linux `x86_64`，同一个二进制可直接用于 WSL
 
 ### 从源码安装
 
