@@ -13,7 +13,7 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install pinned toolchain
         run: rustup show
       - name: Check tag matches Cargo version
@@ -32,7 +32,7 @@ jobs:
     needs: verify
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install pinned toolchain
         run: rustup show
       - name: Build
@@ -47,7 +47,7 @@ jobs:
           cp docs/LICENSING.md "dist/${asset}/docs/"
           cp -R licenses "dist/${asset}/"
           tar -C dist -czf "dist/${asset}.tar.gz" "${asset}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: thu-cli-linux-x86_64
           path: dist/*.tar.gz
@@ -57,7 +57,7 @@ jobs:
     needs: verify
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install pinned toolchain
         run: rustup show
       - name: Build
@@ -72,7 +72,7 @@ jobs:
           cp docs/LICENSING.md "dist/${asset}/docs/"
           cp -R licenses "dist/${asset}/"
           (cd dist && 7z a "${asset}.zip" "${asset}")
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: thu-cli-windows-x86_64
           path: dist/*.zip
@@ -82,7 +82,7 @@ jobs:
     needs: verify
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install pinned toolchain and macOS targets
         run: |
           rustup show
@@ -106,7 +106,7 @@ jobs:
           cp docs/LICENSING.md "dist/${asset}/docs/"
           cp -R licenses "dist/${asset}/"
           tar -C dist -czf "dist/${asset}.tar.gz" "${asset}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: thu-cli-macos-universal
           path: dist/*.tar.gz
@@ -122,7 +122,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           path: dist
           merge-multiple: true
@@ -132,11 +132,13 @@ jobs:
           cd dist
           shopt -s nullglob
           archives=(*.tar.gz *.zip)
+          test "${#archives[@]}" -eq 3
           sha256sum "${archives[@]}" > SHA256SUMS
           cat SHA256SUMS
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
@@ -147,3 +149,4 @@ jobs:
               --generate-notes \
               --title "thu-cli $GITHUB_REF_NAME"
           fi
+          test "$(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets | length')" -eq 4
