@@ -3,23 +3,53 @@ name: CI
 on:
   push:
     branches: [main]
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number approved for testing
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   test:
-    # Never execute code from an external fork on the persistent self-hosted runner.
-    # Same-repository branches and pushes use mmw1; external PRs use an ephemeral
-    # GitHub-hosted runner.
-    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || fromJSON('["self-hosted", "linux", "x64", "mmw1", "thu-cli"]') }}
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - name: Clippy advisory
+        continue-on-error: true
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo test --locked
+      - run: cargo build --locked --release
+
+  test-pull-request:
+    if: github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate approved pull request number
+        shell: bash
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          if [[ ! "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+            echo "pr_number must be a positive pull request number" >&2
+            exit 1
+          fi
+      - uses: actions/checkout@v5
+        with:
+          ref: refs/pull/${{ inputs.pr_number }}/head
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
       - run: cargo fmt --all -- --check
       - name: Clippy advisory
         continue-on-error: true
