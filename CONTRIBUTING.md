@@ -22,6 +22,10 @@ If live behavior is tested, use read-only operations first. Do not commit real
 responses or account identifiers. Describe unavailable infrastructure or
 verification boundaries explicitly.
 
+Pull request CI is not triggered automatically. After reviewing a pull request,
+the repository owner can start the `CI` workflow manually with its pull request
+number. The GitHub-hosted job rejects runs initiated by anyone else.
+
 ## Operation safety
 
 Every server-mutating operation must remain marked as mutating and must require
