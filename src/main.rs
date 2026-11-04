@@ -433,6 +433,7 @@ async fn run(cli: &Cli) -> Result<Value> {
             }
             let count = session.import_netscape(file)?;
             session.clear_profile()?;
+            session.remove_private_sidecar("wsbx-auth")?;
             Ok(json!({"imported_cookies":count}))
         }
         Command::Logout { confirm } => {

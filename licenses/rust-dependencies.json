@@ -162,6 +162,16 @@
     ]
   },
   {
+    "name": "base64ct",
+    "version": "1.8.3",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/RustCrypto/formats",
+    "notice_files": [
+      "LICENSE-APACHE",
+      "LICENSE-MIT"
+    ]
+  },
+  {
     "name": "bitflags",
     "version": "2.13.2",
     "license": "MIT OR Apache-2.0",
@@ -341,6 +351,16 @@
     ]
   },
   {
+    "name": "const-oid",
+    "version": "0.9.6",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/RustCrypto/formats/tree/master/const-oid",
+    "notice_files": [
+      "LICENSE-APACHE",
+      "LICENSE-MIT"
+    ]
+  },
+  {
     "name": "cookie",
     "version": "0.18.2",
     "license": "MIT OR Apache-2.0",
@@ -459,6 +479,16 @@
     ]
   },
   {
+    "name": "der",
+    "version": "0.7.10",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/RustCrypto/formats/tree/master/der",
+    "notice_files": [
+      "LICENSE-APACHE",
+      "LICENSE-MIT"
+    ]
+  },
+  {
     "name": "deranged",
     "version": "0.5.9",
     "license": "MIT OR Apache-2.0",
@@ -484,6 +514,16 @@
     "repository": "https://github.com/JelteF/derive_more",
     "notice_files": [
       "LICENSE"
+    ]
+  },
+  {
+    "name": "digest",
+    "version": "0.10.7",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/RustCrypto/traits",
+    "notice_files": [
+      "LICENSE-APACHE",
+      "LICENSE-MIT"
     ]
   },
   {
@@ -1130,6 +1170,15 @@
     ]
   },
   {
+    "name": "libm",
+    "version": "0.2.16",
+    "license": "MIT",
+    "repository": "https://github.com/rust-lang/compiler-builtins",
+    "notice_files": [
+      "LICENSE.txt"
+    ]
+  },
+  {
     "name": "libredox",
     "version": "0.1.25",
     "license": "MIT",
@@ -1313,6 +1362,16 @@
     ]
   },
   {
+    "name": "num-bigint-dig",
+    "version": "0.8.6",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/dignifiedquire/num-bigint",
+    "notice_files": [
+      "LICENSE-APACHE",
+      "LICENSE-MIT"
+    ]
+  },
+  {
     "name": "num-conv",
     "version": "0.2.2",
     "license": "MIT OR Apache-2.0",
@@ -1330,6 +1389,16 @@
     "notice_files": [
       "LICENSE-MIT",
       "LICENSE-APACHE"
+    ]
+  },
+  {
+    "name": "num-iter",
+    "version": "0.1.46",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-num/num-iter",
+    "notice_files": [
+      "LICENSE-APACHE",
+      "LICENSE-MIT"
     ]
   },
   {
@@ -1402,6 +1471,16 @@
     ]
   },
   {
+    "name": "pem-rfc7468",
+    "version": "0.7.0",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/RustCrypto/formats/tree/master/pem-rfc7468",
+    "notice_files": [
+      "LICENSE-APACHE",
+      "LICENSE-MIT"
+    ]
+  },
+  {
     "name": "percent-encoding",
     "version": "2.3.2",
     "license": "MIT OR Apache-2.0",
@@ -1464,6 +1543,26 @@
     "notice_files": [
       "LICENSE-MIT",
       "LICENSE-APACHE"
+    ]
+  },
+  {
+    "name": "pkcs1",
+    "version": "0.7.5",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/RustCrypto/formats/tree/master/pkcs1",
+    "notice_files": [
+      "LICENSE-APACHE",
+      "LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "pkcs8",
+    "version": "0.10.2",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/RustCrypto/formats/tree/master/pkcs8",
+    "notice_files": [
+      "LICENSE-APACHE",
+      "LICENSE-MIT"
     ]
   },
   {
@@ -1590,6 +1689,16 @@
   },
   {
     "name": "rand",
+    "version": "0.10.3",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-random/rand",
+    "notice_files": [
+      "LICENSE-MIT",
+      "LICENSE-APACHE"
+    ]
+  },
+  {
+    "name": "rand",
     "version": "0.8.8",
     "license": "MIT OR Apache-2.0",
     "repository": "https://github.com/rust-random/rand",
@@ -1609,8 +1718,18 @@
     ]
   },
   {
-    "name": "rand",
-    "version": "0.10.3",
+    "name": "rand_chacha",
+    "version": "0.3.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-random/rand",
+    "notice_files": [
+      "LICENSE-APACHE",
+      "LICENSE-MIT"
+    ]
+  },
+  {
+    "name": "rand_chacha",
+    "version": "0.9.0",
     "license": "MIT OR Apache-2.0",
     "repository": "https://github.com/rust-random/rand",
     "notice_files": [
@@ -1619,10 +1738,10 @@
     ]
   },
   {
-    "name": "rand_chacha",
-    "version": "0.9.0",
+    "name": "rand_core",
+    "version": "0.10.1",
     "license": "MIT OR Apache-2.0",
-    "repository": "https://github.com/rust-random/rand",
+    "repository": "https://github.com/rust-random/rand_core",
     "notice_files": [
       "LICENSE-MIT",
       "LICENSE-APACHE"
@@ -1643,16 +1762,6 @@
     "version": "0.9.5",
     "license": "MIT OR Apache-2.0",
     "repository": "https://github.com/rust-random/rand",
-    "notice_files": [
-      "LICENSE-MIT",
-      "LICENSE-APACHE"
-    ]
-  },
-  {
-    "name": "rand_core",
-    "version": "0.10.1",
-    "license": "MIT OR Apache-2.0",
-    "repository": "https://github.com/rust-random/rand_core",
     "notice_files": [
       "LICENSE-MIT",
       "LICENSE-APACHE"
@@ -1754,6 +1863,16 @@
     "repository": "https://github.com/conradkleinespel/rpassword",
     "notice_files": [
       "LICENSE-APACHE"
+    ]
+  },
+  {
+    "name": "rsa",
+    "version": "0.9.10",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/RustCrypto/RSA",
+    "notice_files": [
+      "LICENSE-APACHE",
+      "LICENSE-MIT"
     ]
   },
   {
@@ -1953,6 +2072,16 @@
     ]
   },
   {
+    "name": "signature",
+    "version": "2.2.0",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/RustCrypto/traits/tree/master/signature",
+    "notice_files": [
+      "LICENSE-APACHE",
+      "LICENSE-MIT"
+    ]
+  },
+  {
     "name": "simd-adler32",
     "version": "0.3.10",
     "license": "MIT",
@@ -2009,6 +2138,25 @@
     "notice_files": [
       "LICENSE-MIT",
       "LICENSE-APACHE"
+    ]
+  },
+  {
+    "name": "spin",
+    "version": "0.9.9",
+    "license": "MIT",
+    "repository": "https://github.com/mvdnes/spin-rs.git",
+    "notice_files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "name": "spki",
+    "version": "0.7.3",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/RustCrypto/formats/tree/master/spki",
+    "notice_files": [
+      "LICENSE-APACHE",
+      "LICENSE-MIT"
     ]
   },
   {

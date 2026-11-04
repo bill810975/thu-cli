@@ -672,6 +672,7 @@ op("thos.services",false,"THOS service catalogue",&[],&["page","size","keyword"]
             .cloned()
             .unwrap_or_default(),
     );
+    a.extend(crate::wsbx::operations());
     Value::Array(a)
 }
 pub fn roaming(operation: &str, a: &Value) -> Option<(&'static str, String)> {
@@ -761,6 +762,9 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
     }
     if operation.starts_with("card.") {
         return crate::thu_card::execute(c, operation, a).await;
+    }
+    if operation.starts_with("wsbx.") {
+        return crate::wsbx::execute(session, operation, a).await;
     }
     if operation.starts_with("course.") {
         return course(session, operation, a).await;

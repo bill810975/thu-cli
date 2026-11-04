@@ -9,6 +9,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+use zeroize::Zeroizing;
 
 pub struct Session {
     pub client: Client,
@@ -214,6 +215,78 @@ impl Session {
         result
     }
 
+    fn sidecar_path(&self, suffix: &str) -> Result<PathBuf> {
+        if suffix.is_empty()
+            || !suffix
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+        {
+            bail!("Invalid private sidecar name")
+        }
+        Ok(self.path.with_extension(suffix))
+    }
+
+    pub fn read_private_sidecar(&self, suffix: &str) -> Result<Option<Zeroizing<String>>> {
+        let path = self.sidecar_path(suffix)?;
+        if !path.exists() {
+            return Ok(None);
+        }
+        if fs::symlink_metadata(&path)?.file_type().is_symlink() {
+            bail!("Private session sidecar must not be a symlink")
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if fs::metadata(&path)?.permissions().mode() & 0o077 != 0 {
+                bail!("Private session sidecar permissions are too broad; run chmod 600 on it")
+            }
+        }
+        Ok(Some(Zeroizing::new(fs::read_to_string(path)?)))
+    }
+
+    pub fn write_private_sidecar(&self, suffix: &str, value: &str) -> Result<()> {
+        secure_parent(&self.path)?;
+        let path = self.sidecar_path(suffix)?;
+        if path.exists() && fs::symlink_metadata(&path)?.file_type().is_symlink() {
+            bail!("Private session sidecar must not be a symlink")
+        }
+        let temp = path.with_extension(format!("tmp.{}", std::process::id()));
+        if temp.exists() {
+            fs::remove_file(&temp)?;
+        }
+        let mut options = OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let file = options
+            .open(&temp)
+            .context("Cannot create private session sidecar")?;
+        let result = (|| -> Result<()> {
+            let mut writer = BufWriter::new(file);
+            writer.write_all(value.as_bytes())?;
+            writer.flush()?;
+            writer.get_ref().sync_all()?;
+            fs::rename(&temp, &path)?;
+            Ok(())
+        })();
+        if result.is_err() {
+            let _ = fs::remove_file(&temp);
+        }
+        result
+    }
+
+    pub fn remove_private_sidecar(&self, suffix: &str) -> Result<()> {
+        let path = self.sidecar_path(suffix)?;
+        match fs::remove_file(path) {
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(error).context("Cannot remove private session sidecar"),
+        }
+    }
+
     pub fn clear_profile(&self) -> Result<()> {
         let path = self.path.with_extension("auth.json");
         match fs::remove_file(path) {
@@ -315,7 +388,8 @@ impl Session {
             .map_err(|_| anyhow::anyhow!("Cookie store lock poisoned"))?
             .clear();
         self.save()?;
-        self.clear_profile()
+        self.clear_profile()?;
+        self.remove_private_sidecar("wsbx-auth")
     }
 }
 
@@ -400,5 +474,39 @@ mod tests {
 
         session.clear_profile().unwrap();
         assert_eq!(session.load_profile().unwrap(), None);
+    }
+
+    #[test]
+    fn private_sidecar_is_owner_only_and_removable() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("info.json");
+        let session = Session::open(path.clone()).unwrap();
+
+        session
+            .write_private_sidecar("wsbx-auth", r#"{"token":"fixture"}"#)
+            .unwrap();
+        assert_eq!(
+            session
+                .read_private_sidecar("wsbx-auth")
+                .unwrap()
+                .unwrap()
+                .as_str(),
+            r#"{"token":"fixture"}"#
+        );
+        let sidecar_path = path.with_extension("wsbx-auth");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(
+                fs::metadata(&sidecar_path).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
+        }
+
+        session.remove_private_sidecar("wsbx-auth").unwrap();
+        assert!(session.read_private_sidecar("wsbx-auth").unwrap().is_none());
+        assert!(session
+            .write_private_sidecar("../escape", "fixture")
+            .is_err());
     }
 }

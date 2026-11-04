@@ -37,6 +37,8 @@ agent。
 - 隐藏密码输入、SM2 加密、多因素认证，以及可选的 Keychain 密码回退。
 - 支持校园新闻、课程、作业、课表、日历、图书馆、体育、一卡通、网络、
   邮箱、发票、THOS、GitLab 等服务。
+- 支持日常报销（`052`）草稿：项目绑定、报销事项模板、电子发票、附件、
+  暂存、提交、删除和撤单。
 - 支持 Learn 课程、通知、文件、作业、问卷和下载。
 - 支持 JSON 输出、操作发现、显式变更确认和防覆盖下载。
 - 提供可安装的 Codex skill 和可直接交给 agent 的安装 prompt。
@@ -44,6 +46,9 @@ agent。
 只读的 Info 和 Learn 登录、会话续期已做过真实环境测试。写操作、账号具体
 权限、验证码流程以及其余校园服务的覆盖范围与限制，以
 [docs/COVERAGE.md](docs/COVERAGE.md) 为准。
+
+日常报销客户端还使用真实账号完成了项目绑定和草稿暂存验证；没有提交真实
+审批单。
 
 ## 环境要求
 
@@ -186,6 +191,23 @@ thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
 thu-cli --compact --session "$HOME/.config/thu-cli/learn.json" \
   learn semesters
 ```
+
+日常报销的只读入口：
+
+```sh
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.business-types
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.project.list --args '{"page_size":10}'
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.draft.list --args '{"status":"ALL-2"}'
+```
+
+报销 SSO ticket 和会轮换的 API token 都通过已登录的 Info 会话按需获取。
+token 保存在权限为 `600` 的私有 sidecar 中，不会输出。完整的草稿、发票、
+附件、暂存和显式提交流程见 [docs/wsbx.md](docs/wsbx.md)。
 
 ## 安全模型
 

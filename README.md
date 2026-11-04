@@ -38,6 +38,8 @@ For an agent-driven installation, give an agent the prompt in
 - Hidden password input, SM2 encryption, MFA, and optional Keychain reuse.
 - Campus news search, courses, homework, schedules, calendar, library, sports,
   card, network, mail, invoices, THOS, GitLab, and other service operations.
+- Daily reimbursement (`052`) drafts: project binding, expense item templates,
+  electronic invoices, attachments, save, submit, delete, and withdrawal.
 - Learn courses, notifications, files, homework, questionnaires, and downloads.
 - JSON output, operation discovery, explicit mutation confirmation, and
   non-overwriting downloads.
@@ -47,6 +49,10 @@ Live read-only Info and Learn authentication and session refresh have been
 tested. Write operations, account-specific entitlements, CAPTCHA flows, and
 every campus service remain subject to the boundaries in
 [docs/COVERAGE.md](docs/COVERAGE.md).
+
+The daily reimbursement client has also been checked against a live account
+through project binding and draft save. It has deliberately not submitted a real
+approval.
 
 ## Requirements
 
@@ -185,6 +191,24 @@ thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
 thu-cli --compact --session "$HOME/.config/thu-cli/learn.json" \
   learn semesters
 ```
+
+Daily reimbursement discovery and a safe read-only start:
+
+```sh
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.business-types
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.project.list --args '{"page_size":10}'
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.draft.list --args '{"status":"ALL-2"}'
+```
+
+The SSO ticket and rotating reimbursement token are obtained on demand from the
+already-authenticated Info profile. The token is stored in a mode-`600` private
+sidecar and is never printed. See [docs/wsbx.md](docs/wsbx.md) for the complete
+draft, invoice, attachment, save and explicit-submit workflow.
 
 ## Safety model
 

@@ -33,6 +33,9 @@ out to Node, Python, OpenSSL, a mobile app, or a browser for ordinary login.
   sidecar next to the Cookie profile. Read-only operations use it to refresh an
   expired trusted-device session on demand, then retry once. No background
   daemon or scheduled keepalive is required.
+- The reimbursement service exchanges an Info portal ticket for its own rotating
+  API token. That token is stored in a separate mode-`600` sidecar and refreshed
+  on demand. The CLI does not extract browser Cookies or run a token daemon.
 - macOS Keychain remains an opt-in fallback for the case where the persistent
   identity Cookie expires and unattended password reauthentication is required.
 - Password memory owned by LoginOptions is zeroized on drop. HTTP bodies and

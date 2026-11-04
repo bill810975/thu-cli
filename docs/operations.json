@@ -1975,6 +1975,278 @@
         "provider"
       ],
       "upstream": "thu-info-lib/src/lib/card.ts"
+    },
+    {
+      "description": "Verify reimbursement SSO and return the current user profile",
+      "mutating": false,
+      "name": "wsbx.user",
+      "optional": [],
+      "required": [],
+      "upstream": "wsbx login/sso + userInfo"
+    },
+    {
+      "description": "List enabled reimbursement business types",
+      "mutating": false,
+      "name": "wsbx.business-types",
+      "optional": [],
+      "required": [],
+      "upstream": "myReceipts/getYwlxs/get"
+    },
+    {
+      "description": "Search projects available to the current user",
+      "mutating": false,
+      "name": "wsbx.project.list",
+      "optional": [
+        "ywlx",
+        "query",
+        "department",
+        "principal",
+        "page_size",
+        "include_zero_balance"
+      ],
+      "required": [],
+      "upstream": "common/funds/list"
+    },
+    {
+      "description": "List reimbursement drafts or submitted receipts",
+      "mutating": false,
+      "name": "wsbx.draft.list",
+      "optional": [
+        "ywlx",
+        "status",
+        "page_size",
+        "route",
+        "delegated",
+        "filter_delegation"
+      ],
+      "required": [],
+      "upstream": "todoEs/getTodoLi"
+    },
+    {
+      "description": "Read a reimbursement draft by business number",
+      "mutating": false,
+      "name": "wsbx.draft.get",
+      "optional": [],
+      "required": [
+        "ywbh"
+      ],
+      "upstream": "rmb/info/get"
+    },
+    {
+      "description": "Read the workflow state of a receipt",
+      "mutating": false,
+      "name": "wsbx.draft.status",
+      "optional": [],
+      "required": [
+        "ywbh"
+      ],
+      "upstream": "common/get/ywbxr"
+    },
+    {
+      "description": "Allocate a new reimbursement business number without submitting a receipt",
+      "mutating": true,
+      "name": "wsbx.draft.create",
+      "optional": [
+        "ywlx"
+      ],
+      "required": [],
+      "upstream": "common/ywbh/get"
+    },
+    {
+      "description": "Read available reimbursement expense items for a project",
+      "mutating": false,
+      "name": "wsbx.draft.template",
+      "optional": [
+        "ywlx"
+      ],
+      "required": [
+        "ywbh",
+        "project"
+      ],
+      "upstream": "zdhb/template/get"
+    },
+    {
+      "description": "Bind a project to a draft and return its reimbursement-item template",
+      "mutating": true,
+      "name": "wsbx.draft.bind-project",
+      "optional": [
+        "ywlx",
+        "old_project",
+        "operator"
+      ],
+      "required": [
+        "ywbh",
+        "project"
+      ],
+      "upstream": "common/updateXmInfo"
+    },
+    {
+      "description": "List electronic invoices by pending or used reimbursement state",
+      "mutating": false,
+      "name": "wsbx.invoice.list",
+      "optional": [
+        "ywbh",
+        "query",
+        "page_size",
+        "status"
+      ],
+      "required": [],
+      "upstream": "invoice/list"
+    },
+    {
+      "description": "Bind selected electronic invoices to a reimbursement item",
+      "mutating": true,
+      "name": "wsbx.invoice.bind",
+      "optional": [
+        "ywlx"
+      ],
+      "required": [
+        "ywbh",
+        "item",
+        "invoice_numbers"
+      ],
+      "upstream": "zdhb/dzfp/bind"
+    },
+    {
+      "description": "Unbind one electronic invoice from a reimbursement item",
+      "mutating": true,
+      "name": "wsbx.invoice.unbind",
+      "optional": [],
+      "required": [
+        "ywbh",
+        "invoice_number"
+      ],
+      "upstream": "zdhb/dzfp/mx/delete"
+    },
+    {
+      "description": "Set the reimbursed amount of an electronic invoice",
+      "mutating": true,
+      "name": "wsbx.invoice.set-amount",
+      "optional": [],
+      "required": [
+        "ywbh",
+        "invoice_number",
+        "amount"
+      ],
+      "upstream": "zdhb/dzfp/sbje/update"
+    },
+    {
+      "description": "Read electronic invoices attached to a reimbursement item",
+      "mutating": false,
+      "name": "wsbx.invoice.detail",
+      "optional": [],
+      "required": [
+        "ywbh",
+        "item"
+      ],
+      "upstream": "zdhb/dzfp/mx/get"
+    },
+    {
+      "description": "List required and optional attachment categories for a draft",
+      "mutating": false,
+      "name": "wsbx.attachment.types",
+      "optional": [],
+      "required": [
+        "ywbh"
+      ],
+      "upstream": "jh/fj/get"
+    },
+    {
+      "description": "List attachments on a draft",
+      "mutating": false,
+      "name": "wsbx.attachment.list",
+      "optional": [
+        "ywlx"
+      ],
+      "required": [
+        "ywbh"
+      ],
+      "upstream": "file/get/list"
+    },
+    {
+      "description": "Upload one attachment to a draft",
+      "mutating": true,
+      "name": "wsbx.attachment.upload",
+      "optional": [
+        "ywlx"
+      ],
+      "required": [
+        "ywbh",
+        "file",
+        "attachment_type"
+      ],
+      "upstream": "file/common/upload/file"
+    },
+    {
+      "description": "Delete one attachment from a draft",
+      "mutating": true,
+      "name": "wsbx.attachment.delete",
+      "optional": [
+        "fjly"
+      ],
+      "required": [
+        "attachment"
+      ],
+      "upstream": "file/uploadfile/delete"
+    },
+    {
+      "description": "Validate and save reimbursement fields, items and payments as a draft",
+      "mutating": true,
+      "name": "wsbx.draft.save",
+      "optional": [
+        "ywlx",
+        "purpose",
+        "description",
+        "payments",
+        "no_paper"
+      ],
+      "required": [
+        "ywbh",
+        "project",
+        "phone",
+        "items"
+      ],
+      "upstream": "pay/whole/submit"
+    },
+    {
+      "description": "Submit a fully prepared daily reimbursement; inspect server state before retrying",
+      "mutating": true,
+      "name": "wsbx.draft.submit",
+      "optional": [
+        "ywlx",
+        "purpose",
+        "description",
+        "payments",
+        "is_online",
+        "no_paper"
+      ],
+      "required": [
+        "ywbh",
+        "project",
+        "phone",
+        "items"
+      ],
+      "upstream": "pay/whole/submit"
+    },
+    {
+      "description": "Permanently delete a draft by business number",
+      "mutating": true,
+      "name": "wsbx.draft.delete",
+      "optional": [],
+      "required": [
+        "ywbh"
+      ],
+      "upstream": "todoEs/receipt/delete"
+    },
+    {
+      "description": "Request withdrawal of a submitted receipt by business number",
+      "mutating": true,
+      "name": "wsbx.draft.revoke",
+      "optional": [],
+      "required": [
+        "ywbh"
+      ],
+      "upstream": "todoEs/receipt/revoke"
     }
   ]
 }

@@ -153,7 +153,41 @@ removal from a title alone.
 For other campus services, inspect the catalog first. Prefixes currently cover
 `course`, `schedule`, `calendar`, `info`, `news`, `library`, `sports`, `card`,
 `network`, `program`, `assessment`, `classroom`, `dorm`, `invoice`, `thos`, and
-`gitlab`.
+`gitlab`, plus the `wsbx` reimbursement workflow.
+
+## Online Reimbursement
+
+The `wsbx.*` operations use the authenticated Info profile to acquire a wsbx SSO
+ticket on demand. They keep the rotating wsbx token in a private mode-600
+sidecar; never print or copy it. No background service is required.
+
+Start with reads:
+
+```sh
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.business-types
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.project.list --args '{"page_size":10}'
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.draft.list --args '{"status":"ALL-2"}'
+```
+
+The daily reimbursement workflow is `ywlx=052`: allocate a draft number, bind a
+project, use its expense-item template, bind unused invoices and attachments,
+save, then submit separately. `draft.bind-project`, `invoice.bind`,
+`attachment.upload`, `draft.save`, and `draft.submit` all mutate server state.
+
+`wsbx.invoice.list` defaults to pending invoices. Use
+`--args '{"query":"INVOICE_NUMBER","status":"used"}'` to check invoices already
+used by a reimbursement in progress or completed. An empty pending result alone
+does not identify which reimbursement consumed the invoice.
+
+Before `wsbx.draft.submit`, inspect both `wsbx.draft.get` and
+`wsbx.draft.status`. Submit only when the user explicitly authorized the exact
+receipt and fields. Never retry an ambiguous submission; inspect status first.
+See the repository's `docs/wsbx.md` for argument structure.
 
 ## Learn Workflows
 

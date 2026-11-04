@@ -64,6 +64,40 @@ fn missing_required_argument_fails_offline() {
     assert!(!o.status.success());
     assert!(String::from_utf8_lossy(&o.stderr).contains("semester"));
 }
+
+#[test]
+fn reimbursement_submit_requires_confirmation_before_network() {
+    let d = tempfile::tempdir().unwrap();
+    let s = d.path().join("cookies.json");
+    let args = r#"{"ywbh":"YB_FIXTURE","project":{"bmbh":"999","xmbh":"FIXTURE"},"phone":"10000000000","items":[]}"#;
+    let o = cli()
+        .arg("--session")
+        .arg(&s)
+        .args(["thu", "wsbx.draft.submit", "--args", args])
+        .output()
+        .unwrap();
+    assert!(!o.status.success());
+    assert!(!s.exists());
+    assert!(String::from_utf8_lossy(&o.stderr).contains("--confirm"));
+}
+
+#[test]
+fn reimbursement_submit_dry_run_is_offline() {
+    let d = tempfile::tempdir().unwrap();
+    let s = d.path().join("cookies.json");
+    let args = r#"{"ywbh":"YB_FIXTURE","project":{"bmbh":"999","xmbh":"FIXTURE"},"phone":"10000000000","items":[]}"#;
+    let o = cli()
+        .arg("--session")
+        .arg(&s)
+        .args(["thu", "wsbx.draft.submit", "--args", args, "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    assert!(!s.exists());
+    let v: Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["network_request_sent"], false);
+}
+
 #[test]
 fn global_help_and_version() {
     assert!(cli().arg("--help").status().unwrap().success());
