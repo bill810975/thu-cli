@@ -108,6 +108,13 @@ the current profile to prevent accidental identity mixing; use `--refresh` for
 the non-destructive renewal path. Add `--keychain` only when persistent Cookie
 renewal has failed and a stored password is the chosen fallback.
 
+Successful login also writes non-secret refresh metadata beside the private
+Cookie profile. Read-only service calls use it to refresh an expired trusted
+session automatically and retry once, without a background daemon. State-changing
+calls may refresh before execution but are never replayed after an authentication
+error because their outcome may already have been committed. Use
+`--no-auto-refresh` to disable recovery for one call.
+
 If the server requires CAPTCHA, an untrusted-device MFA challenge, or another
 human action, `--non-interactive` fails instead of guessing. Do not extract
 Cookies from a browser, put a password in shell history, expose Keychain data,

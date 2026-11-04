@@ -138,6 +138,9 @@ struct Call {
     /// Skip automatic destination SSO only when a valid target session already exists
     #[arg(long)]
     no_roam: bool,
+    /// Do not refresh an expired trusted-device session automatically
+    #[arg(long)]
+    no_auto_refresh: bool,
     /// JSON object containing operation arguments
     #[arg(long, default_value = "{}", conflicts_with = "args_file")]
     args: String,
@@ -207,6 +210,167 @@ fn password_from_file(path: &PathBuf) -> Result<Zeroizing<String>> {
             .to_owned(),
     ))
 }
+
+async fn execute_service(
+    session: &Session,
+    service: &str,
+    operation: &str,
+    args: &Value,
+) -> Result<Value> {
+    if service == "app" {
+        app::execute(&session.client, operation, args).await
+    } else if service == "thu" {
+        thu::execute(session, operation, args).await
+    } else {
+        learn::execute(&session.client, operation, args).await
+    }
+}
+
+async fn refresh_session(session: &Session) -> Result<()> {
+    let profile = session.load_profile()?.ok_or_else(|| {
+        anyhow::anyhow!(
+            "automatic session refresh is unavailable because this profile has no saved login metadata; rerun login once"
+        )
+    })?;
+    let mut options = auth::LoginOptions {
+        username: profile.username.clone(),
+        password: String::new(),
+        fingerprint: profile.fingerprint.clone(),
+        service: profile.service.clone(),
+        two_factor_method: None,
+        interactive: false,
+        trust_device: true,
+        use_webvpn: profile.use_webvpn,
+    };
+    match auth::login(&session.auth_client, &options).await {
+        Ok(_) => Ok(()),
+        Err(error) if auth::is_password_required(&error) => {
+            let secret = keychain::get(&profile.username).map_err(|_| {
+                error.context(
+                    "trusted-device refresh needs a hidden interactive login or the optional Keychain fallback",
+                )
+            })?;
+            options.password = secret.to_string();
+            auth::login(&session.auth_client, &options)
+                .await
+                .map(|_| ())
+        }
+        Err(error) => Err(error),
+    }
+}
+
+async fn roam_for_call(session: &Session, call: &Call, policy: &str, payload: &str) -> Result<()> {
+    let credentials = if let Some(user) = &call.username {
+        Some(auth::LoginOptions {
+            username: user.clone(),
+            password: password(None)?.to_string(),
+            fingerprint: "thu-cli-native".into(),
+            service: "info".into(),
+            two_factor_method: None,
+            interactive: true,
+            trust_device: false,
+            use_webvpn: false,
+        })
+    } else {
+        None
+    };
+    auth::roam(
+        &session.auth_client,
+        &auth::RoamOptions {
+            policy: policy.to_owned(),
+            payload: payload.to_owned(),
+            credentials,
+        },
+    )
+    .await
+    .map(|_| ())
+}
+
+async fn execute_service_with_recovery(
+    session: &Session,
+    service: &str,
+    call: &Call,
+    op: &Value,
+    args: &Value,
+) -> Result<Value> {
+    let mutating = op["mutating"].as_bool().unwrap_or(true);
+    let auto_refresh = !call.no_auto_refresh;
+    let roam = if service == "thu" && !call.no_roam {
+        thu::roaming(&call.operation, args)
+    } else {
+        None
+    };
+
+    // Read-only campus requests try the direct endpoint first. This keeps
+    // intranet calls fast and avoids requiring a WebVPN session on campus.
+    if service == "thu" && !mutating {
+        let first_error = match execute_service(session, service, &call.operation, args).await {
+            Ok(result) => return Ok(result),
+            Err(error) => error,
+        };
+        let mut refreshed = false;
+        if auto_refresh && auth::is_auth_failure(&first_error) {
+            refresh_session(session).await?;
+            refreshed = true;
+            if let Ok(result) = execute_service(session, service, &call.operation, args).await {
+                return Ok(result);
+            }
+        }
+        let Some((policy, payload)) = roam else {
+            if refreshed {
+                return execute_service(session, service, &call.operation, args).await;
+            }
+            return Err(first_error);
+        };
+
+        if let Err(error) = roam_for_call(session, call, policy, &payload).await {
+            if auto_refresh && !refreshed && auth::is_auth_failure(&error) {
+                refresh_session(session).await?;
+                refreshed = true;
+                roam_for_call(session, call, policy, &payload).await?;
+            } else {
+                return Err(error
+                    .context("direct request failed and destination-session roaming also failed"));
+            }
+        }
+        match execute_service(session, service, &call.operation, args).await {
+            Err(error) if auto_refresh && !refreshed && auth::is_auth_failure(&error) => {
+                refresh_session(session).await?;
+                execute_service(session, service, &call.operation, args).await
+            }
+            result => result,
+        }
+    } else if service == "learn" && !mutating {
+        match execute_service(session, service, &call.operation, args).await {
+            Err(error) if auto_refresh && auth::is_auth_failure(&error) => {
+                refresh_session(session).await?;
+                execute_service(session, service, &call.operation, args).await
+            }
+            result => result,
+        }
+    } else {
+        // Establish the destination before a state-changing request. A refresh
+        // may be retried only while roaming, before the operation itself runs.
+        if let Some((policy, payload)) = roam {
+            if let Err(error) = roam_for_call(session, call, policy, &payload).await {
+                if auto_refresh && auth::is_auth_failure(&error) {
+                    refresh_session(session).await?;
+                    roam_for_call(session, call, policy, &payload).await?;
+                } else {
+                    return Err(error);
+                }
+            }
+        }
+        let result = execute_service(session, service, &call.operation, args).await;
+        match result {
+            Err(error) if mutating && auth::is_auth_failure(&error) => Err(error.context(
+                "authentication expired during a state-changing operation; it was not retried because its outcome may be uncertain",
+            )),
+            result => result,
+        }
+    }
+}
+
 async fn run(cli: &Cli) -> Result<Value> {
     match &cli.command {
         Command::Services { service } => {
@@ -248,40 +412,7 @@ async fn run(cli: &Cli) -> Result<Value> {
                 .map(Ok)
                 .unwrap_or_else(session::default_path)?,
         )?;
-        if service == "thu" && !call.no_roam {
-            if let Some((policy, payload)) = thu::roaming(&call.operation, &args) {
-                let credentials = if let Some(user) = &call.username {
-                    Some(auth::LoginOptions {
-                        username: user.clone(),
-                        password: password(None)?.to_string(),
-                        fingerprint: "thu-cli-native".into(),
-                        service: "info".into(),
-                        two_factor_method: None,
-                        interactive: true,
-                        trust_device: false,
-                        use_webvpn: false,
-                    })
-                } else {
-                    None
-                };
-                auth::roam(
-                    &session.auth_client,
-                    &auth::RoamOptions {
-                        policy: policy.into(),
-                        payload,
-                        credentials,
-                    },
-                )
-                .await?;
-            }
-        }
-        let result = if service == "app" {
-            app::execute(&session.client, &call.operation, &args).await
-        } else if service == "thu" {
-            thu::execute(&session, &call.operation, &args).await
-        } else {
-            learn::execute(&session.client, &call.operation, &args).await
-        };
+        let result = execute_service_with_recovery(&session, service, call, &op, &args).await;
         let saved = session.save();
         if let Err(e) = saved {
             return Err(e.context("Session checkpoint failed; the operation may already have executed. Do not blindly retry a mutation"));
@@ -300,7 +431,9 @@ async fn run(cli: &Cli) -> Result<Value> {
             if !confirm {
                 bail!("Use --confirm to replace the local session with imported cookies");
             }
-            Ok(json!({"imported_cookies":session.import_netscape(file)?}))
+            let count = session.import_netscape(file)?;
+            session.clear_profile()?;
+            Ok(json!({"imported_cookies":count}))
         }
         Command::Logout { confirm } => {
             if !confirm {
@@ -334,7 +467,7 @@ async fn run(cli: &Cli) -> Result<Value> {
                 trust_device: *trust_device,
                 use_webvpn: *webvpn,
             };
-            match auth::login(&session.auth_client, &options).await {
+            let login_result = match auth::login(&session.auth_client, &options).await {
                 Ok(result) => Ok(result),
                 Err(error) if auth::is_password_required(&error) => {
                     let secret = if let Some(path) = password_file {
@@ -350,7 +483,15 @@ async fn run(cli: &Cli) -> Result<Value> {
                     auth::login(&session.auth_client, &options).await
                 }
                 Err(error) => Err(error),
-            }
+            };
+            let result = login_result?;
+            session.save_profile(&session::AuthProfile {
+                username: username.clone(),
+                fingerprint: fingerprint.clone(),
+                service: service.clone(),
+                use_webvpn: *webvpn,
+            })?;
+            Ok(result)
         }
         Command::Credential { command } => match command {
             CredentialCommand::Set { username, confirm } => {

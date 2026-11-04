@@ -1,6 +1,7 @@
 use anyhow::{bail, Context, Result};
 use reqwest::Client;
 use reqwest_cookie_store::{CookieStore, CookieStoreMutex};
+use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File, OpenOptions},
     io::{BufReader, BufWriter, Write},
@@ -15,6 +16,15 @@ pub struct Session {
     jar: Arc<CookieStoreMutex>,
     path: PathBuf,
     _lock: File,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct AuthProfile {
+    pub username: String,
+    pub fingerprint: String,
+    pub service: String,
+    #[serde(default)]
+    pub use_webvpn: bool,
 }
 
 pub fn default_path() -> Result<PathBuf> {
@@ -155,6 +165,64 @@ impl Session {
         )
     }
 
+    pub fn load_profile(&self) -> Result<Option<AuthProfile>> {
+        let path = self.path.with_extension("auth.json");
+        if !path.exists() {
+            return Ok(None);
+        }
+        if fs::symlink_metadata(&path)?.file_type().is_symlink() {
+            bail!("Authentication profile must not be a symlink")
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if fs::metadata(&path)?.permissions().mode() & 0o077 != 0 {
+                bail!("Authentication profile permissions are too broad; run chmod 600 on it")
+            }
+        }
+        let profile = serde_json::from_reader(BufReader::new(File::open(&path)?))
+            .context("Cannot parse authentication profile; run login again")?;
+        Ok(Some(profile))
+    }
+
+    pub fn save_profile(&self, profile: &AuthProfile) -> Result<()> {
+        secure_parent(&self.path)?;
+        let path = self.path.with_extension("auth.json");
+        let temp = path.with_extension(format!("tmp.{}", std::process::id()));
+        let mut opts = OpenOptions::new();
+        opts.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            opts.mode(0o600);
+        }
+        let file = opts
+            .open(&temp)
+            .context("Cannot create private authentication profile")?;
+        let result = (|| -> Result<()> {
+            let mut writer = BufWriter::new(file);
+            serde_json::to_writer(&mut writer, profile)
+                .context("Cannot serialize authentication profile")?;
+            writer.flush()?;
+            writer.get_ref().sync_all()?;
+            fs::rename(&temp, &path)?;
+            Ok(())
+        })();
+        if result.is_err() {
+            let _ = fs::remove_file(&temp);
+        }
+        result
+    }
+
+    pub fn clear_profile(&self) -> Result<()> {
+        let path = self.path.with_extension("auth.json");
+        match fs::remove_file(path) {
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(error).context("Cannot clear authentication profile"),
+        }
+    }
+
     pub fn cookie_value(&self, domain: &str, name: &str) -> Result<Option<String>> {
         let jar = self
             .jar
@@ -246,7 +314,8 @@ impl Session {
             .lock()
             .map_err(|_| anyhow::anyhow!("Cookie store lock poisoned"))?
             .clear();
-        self.save()
+        self.save()?;
+        self.clear_profile()
     }
 }
 
@@ -303,5 +372,33 @@ mod tests {
                 .unwrap(),
             Some("fixture".to_owned())
         );
+    }
+
+    #[test]
+    fn authentication_profile_roundtrip_is_private() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("info.json");
+        let session = Session::open(path.clone()).unwrap();
+        let profile = AuthProfile {
+            username: "fixture-user".to_owned(),
+            fingerprint: "fixture-fingerprint".to_owned(),
+            service: "info".to_owned(),
+            use_webvpn: false,
+        };
+
+        session.save_profile(&profile).unwrap();
+        assert_eq!(session.load_profile().unwrap(), Some(profile.clone()));
+        let profile_path = path.with_extension("auth.json");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(
+                fs::metadata(&profile_path).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
+        }
+
+        session.clear_profile().unwrap();
+        assert_eq!(session.load_profile().unwrap(), None);
     }
 }

@@ -33,6 +33,7 @@ agent。
 - 直连校园网或通过 WebVPN 完成清华 Info 认证。
 - Info 与 Learn 使用相互隔离的持久会话。
 - 通过 `--trust-device` 建立接近浏览器的可信设备登录。
+- 只读调用遇到失效会话时按需自动续期，不需要后台常驻进程。
 - 隐藏密码输入、SM2 加密、多因素认证，以及可选的 Keychain 密码回退。
 - 支持校园新闻、课程、作业、课表、日历、图书馆、体育、一卡通、网络、
   邮箱、发票、THOS、GitLab 等服务。
@@ -135,6 +136,10 @@ thu-cli --session "$HOME/.config/thu-cli/learn.json" \
   login --username YOUR_STUDENT_ID --service learn \
   --refresh --trust-device --non-interactive
 ```
+
+CLI 会在 Cookie 配置旁保存不含密钥的续期元数据。只读调用发现会话失效时
+会自动使用它刷新并重试一次；写请求一旦可能到达服务器，就不会被自动重放。
+单次调用可用 `--no-auto-refresh` 关闭该恢复行为。
 
 在 macOS 上，可以把密码作为 Keychain 回退，用于持久身份 Cookie 过期后的
 重新登录：

@@ -29,6 +29,10 @@ out to Node, Python, OpenSSL, a mobile app, or a browser for ordinary login.
 - The live identity service can issue a persistent `TSINGHUAUSERID` Cookie for
   `singleLogin`. `--refresh --non-interactive` reuses this Cookie without a
   password, GUI prompt or Keychain access.
+- Successful login stores non-secret account and route metadata in a private
+  sidecar next to the Cookie profile. Read-only operations use it to refresh an
+  expired trusted-device session on demand, then retry once. No background
+  daemon or scheduled keepalive is required.
 - macOS Keychain remains an opt-in fallback for the case where the persistent
   identity Cookie expires and unattended password reauthentication is required.
 - Password memory owned by LoginOptions is zeroized on drop. HTTP bodies and
@@ -46,6 +50,21 @@ files for separate accounts. Re-run login to renew an expired session.
 
 The CLI does not silently replay mutations after authentication errors. A timeout
 can mean a mutation already executed; inspect server state before retrying.
+
+Automatic recovery is deliberately asymmetric:
+
+- Read-only campus operations try the direct endpoint first. If that fails, the
+  CLI may refresh the trusted-device session, roam into the destination system,
+  and retry once. This permits campus intranet use without a WebVPN ticket.
+- State-changing operations establish authentication and destination roaming
+  before execution. If their request then reports an authentication failure,
+  the CLI does not replay it because the server may already have committed the
+  change.
+- `--no-auto-refresh` disables only this recovery path for an individual call.
+- Automatic refresh remains best-effort. If the trusted device is no longer
+  accepted, the CLI fails rather than prompting inside a background or automated
+  call. An optional macOS Keychain password can extend unattended recovery when
+  no interactive MFA challenge is required.
 
 ## Deliberate limits and validation boundary
 

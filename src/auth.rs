@@ -50,6 +50,28 @@ impl StdError for PasswordRequired {}
 pub fn is_password_required(error: &anyhow::Error) -> bool {
     error.is::<PasswordRequired>()
 }
+
+pub fn is_auth_failure(error: &anyhow::Error) -> bool {
+    const MARKERS: &[&str] = &[
+        "authentication expired",
+        "authentication required",
+        "auth login --service info first",
+        "csrf cookie missing",
+        "csrf token on learn homepage",
+        "establish card session",
+        "identity credential password required",
+        "login page",
+        "not authenticated",
+        "not signed in",
+        "requires credential login",
+        "session expired",
+        "session may be expired",
+    ];
+    error.chain().any(|cause| {
+        let message = cause.to_string().to_ascii_lowercase();
+        MARKERS.iter().any(|marker| message.contains(marker))
+    })
+}
 fn selector(s: &str) -> Selector {
     Selector::parse(s).expect("constant selector")
 }
@@ -835,6 +857,19 @@ mod tests {
         };
         let error = credential_form(&options, "fixture", false, "").unwrap_err();
         assert!(is_password_required(&error));
+    }
+    #[test]
+    fn recognizes_recoverable_authentication_failures() {
+        assert!(is_auth_failure(&anyhow!(
+            "information-portal CSRF cookie missing; auth login --service info first"
+        )));
+        assert!(is_auth_failure(&anyhow!(
+            "card API returned non-JSON; establish card session"
+        )));
+        assert!(is_auth_failure(&anyhow!(
+            "target system requires credential login"
+        )));
+        assert!(!is_auth_failure(&anyhow!("Network balance fields absent")));
     }
     #[test]
     fn trusted_login_requests_a_persistent_browser_session() {

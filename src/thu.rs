@@ -333,10 +333,9 @@ async fn csrf(session: &Session) -> Result<String> {
     if let Some(token) = session.cookie_value("info.tsinghua.edu.cn", "XSRF-TOKEN")? {
         return Ok(token);
     }
-    capture(
-        &(get(&session.client, GET_COOKIE_URL).await? + ";"),
-        r"XSRF-TOKEN=(.+?);",
-    )
+    let cookies = get(&session.client, GET_COOKIE_URL).await?;
+    capture(&(cookies + ";"), r"XSRF-TOKEN=(.+?);")
+        .context("information-portal CSRF cookie missing; session refresh required")
 }
 fn crurl(a: &Value, bks: &'static str, yjs: &'static str) -> &'static str {
     if flag(a, "graduate") {

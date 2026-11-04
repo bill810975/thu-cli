@@ -33,6 +33,8 @@ For an agent-driven installation, give an agent the prompt in
 - Direct campus and WebVPN-aware Tsinghua Info authentication.
 - Separate persistent profiles for Info and Learn.
 - Browser-like trusted login through `--trust-device`.
+- On-demand trusted-session refresh for read-only calls, with no background
+  daemon required.
 - Hidden password input, SM2 encryption, MFA, and optional Keychain reuse.
 - Campus news search, courses, homework, schedules, calendar, library, sports,
   card, network, mail, invoices, THOS, GitLab, and other service operations.
@@ -136,6 +138,11 @@ thu-cli --session "$HOME/.config/thu-cli/learn.json" \
   login --username YOUR_STUDENT_ID --service learn \
   --refresh --trust-device --non-interactive
 ```
+
+The CLI stores non-secret refresh metadata beside each Cookie profile and uses
+it automatically when a read-only call finds an expired session. State-changing
+calls are never replayed after their request may have reached the server. Use
+`--no-auto-refresh` to disable this recovery for one call.
 
 On macOS, an optional Keychain-backed password can be stored for the case where
 the persistent identity Cookie expires:
