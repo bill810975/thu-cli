@@ -61,8 +61,13 @@ thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
   thu wsbx.draft.list --args '{"status":"ALL-2"}'
 ```
 
-For a domestic electronic invoice, check both states when duplicate use is
-possible:
+For a domestic electronic invoice, first check whether its source file has
+already been ingested into `我的票夹`. Use `invoice.identify` to inspect OCR and
+`invoice.add --confirm` only after the user authorizes adding this exact file.
+An exact invoice-number match in either wallet state makes `invoice.add`
+idempotent and is returned as `existing`.
+
+Then check both reimbursement-pool states when duplicate use is possible:
 
 ```sh
 thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
@@ -88,21 +93,29 @@ Supported routes are daily `052`, smart/general `051`, domestic travel `06`,
 conference `19`, and international travel `1206`. Choose from the approved
 activity and Finance's live business type, not from the seller country alone.
 
+For a normal domestic electronic invoice on `052`, paperless reimbursement and
+online push are the default (`no_paper=true`, `is_online=true`). Override them
+only when the user has confirmed that the applicable Finance workflow differs.
+
 ## Prepare the Correct Path
 
 ### Domestic invoice or general receipt
 
-After choosing an existing draft or creating one:
+After adding the source file to the wallet and choosing an existing draft or
+creating one:
 
 1. Bind the exact project with `wsbx.draft.bind-project`.
 2. Read the route template and choose a valid expense item. Use `052` for the
    daily form and `051` for an eligible smart form.
-3. Bind unused domestic electronic invoices with `wsbx.invoice.bind`.
-4. Upload required supporting documents with
+3. Bind unused wallet invoices with `wsbx.invoice.bind`.
+4. If WSBX rejects binding because the handler, project owner, and invoice
+   handler are the same person, search `wsbx.employee.search`, then use
+   authorized `wsbx.invoice.add-witness` with an accurate business note.
+5. Upload required supporting documents with
    `wsbx.attachment.upload`, using a category returned by
    `wsbx.attachment.types`.
-5. Run `wsbx.draft.preview` against the exact draft payload.
-6. Save with `wsbx.draft.save`.
+6. Run `wsbx.draft.preview` against the exact draft payload.
+7. Save with `wsbx.draft.save`.
 
 Paper, fiscal, internal, or non-pooled receipts usually need attachment upload
 and the supporting evidence listed for that expense type.

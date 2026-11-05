@@ -199,12 +199,40 @@ for new work:
 | `19` | Conference |
 | `1206` | International travel with approved RMB/foreign-currency rows |
 
-The normal sequence is: allocate a draft number, bind a project, read the live
-route template, bind unused invoices, upload evidence, save, inspect, then
-submit separately. `draft.bind-project`, `invoice.bind`,
+For a normal domestic e-invoice on daily route `052`, the CLI defaults
+`no_paper` and `is_online` to true. Preserve those defaults for paperless online
+push unless the user explicitly requests and Finance permits another route.
+
+The normal sequence is: ingest and verify a source invoice in the receipt wallet,
+allocate a draft number, bind a project, read the live route template, bind the
+unused wallet invoice, upload evidence, save, inspect, then submit separately.
+`invoice.add`, `invoice.add-witness`, `draft.bind-project`, `invoice.bind`,
 `attachment.upload`, `draft.save`, and `draft.submit` mutate server state.
 `draft.template`, `draft.get`, and invoice unbinding dispatch by route rather
 than assuming `052`.
+
+Use CLI receipt ingestion for a downloaded PDF, OFD, image, or supported ZIP:
+
+```sh
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.invoice.identify \
+  --args '{"file":"/absolute/path/to/receipt.pdf"}'
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.invoice.add \
+  --args '{"file":"/absolute/path/to/receipt.pdf"}' --confirm
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.invoice.wallet.list \
+  --args '{"query":"INVOICE_NUMBER","status":"pending"}'
+```
+
+`invoice.identify` is read-only on WSBX. `invoice.add` performs OCR,
+verification, exact invoice-number deduplication, and wallet insertion. Do not
+repeat `invoice.add` after an ambiguous timeout; inspect `invoice.wallet.list`
+and both pending/used states first. If binding fails because the same person is
+handler, project owner, and invoice handler, use `wsbx.employee.search`, then
+authorized `wsbx.invoice.add-witness` with an accurate note before retrying bind.
 
 Build and validate the complete route payload offline before a write:
 
@@ -217,7 +245,8 @@ For complex drafts, `wsbx.draft.save` and `wsbx.draft.submit` accept a
 `payload` object with the exact server-shaped route fields. The builder requires
 `payload.ywbh` to match the top-level `ywbh` and forces the correct `saveType`.
 
-`wsbx.invoice.list` defaults to pending invoices. Use
+`wsbx.invoice.wallet.list` reads `我的票夹`; `wsbx.invoice.list` reads the
+electronic-invoice pool. The latter defaults to pending invoices. Use
 `--args '{"query":"INVOICE_NUMBER","status":"used"}'` to check invoices already
 used by a reimbursement in progress or completed. An empty pending result alone
 does not identify which reimbursement consumed the invoice.

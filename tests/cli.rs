@@ -99,6 +99,40 @@ fn reimbursement_submit_dry_run_is_offline() {
 }
 
 #[test]
+fn receipt_wallet_add_requires_confirmation_before_network() {
+    let d = tempfile::tempdir().unwrap();
+    let s = d.path().join("cookies.json");
+    let args = r#"{"file":"fixture.pdf"}"#;
+    let o = cli()
+        .arg("--session")
+        .arg(&s)
+        .args(["thu", "wsbx.invoice.add", "--args", args])
+        .output()
+        .unwrap();
+    assert!(!o.status.success());
+    assert!(!s.exists());
+    assert!(String::from_utf8_lossy(&o.stderr).contains("--confirm"));
+}
+
+#[test]
+fn receipt_wallet_add_dry_run_is_offline() {
+    let d = tempfile::tempdir().unwrap();
+    let s = d.path().join("cookies.json");
+    let args = r#"{"file":"fixture.pdf"}"#;
+    let o = cli()
+        .arg("--session")
+        .arg(&s)
+        .args(["thu", "wsbx.invoice.add", "--args", args, "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    assert!(!s.exists());
+    let v: Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["network_request_sent"], false);
+    assert_eq!(v["operation"]["mutating"], true);
+}
+
+#[test]
 fn reimbursement_route_catalog_is_available_offline() {
     let d = tempfile::tempdir().unwrap();
     let s = d.path().join("cookies.json");

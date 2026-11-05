@@ -66,19 +66,27 @@ Use `wsbx=052` only for the daily-reimbursement path, `051` for an eligible smar
 form, `06` for domestic travel, `19` for conference reimbursement, and `1206`
 for an approved international-travel activity. The CLI dispatches template,
 invoice, draft, and submit behavior by `ywlx`; do not force an unrelated expense
-into `052`.
+into `052`. Domestic e-invoice daily reimbursement defaults to paperless
+(`no_paper=true`) and online push (`is_online=true`).
 
 1. `wsbx.project.list` selects the exact `bmbh` and `xmbh`.
 2. `wsbx.draft.list` checks for an existing draft; otherwise create one only
    when the user has authorized the draft mutation.
-3. `wsbx.draft.bind-project` returns the live item template.
-4. `wsbx.invoice.list status=pending` finds unused electronic invoices.
-5. `wsbx.invoice.bind` binds the selected invoice to a valid item.
-6. `wsbx.attachment.types` and `wsbx.attachment.list` determine required files.
-7. `wsbx.attachment.upload` adds supporting evidence.
-8. `wsbx.draft.preview` validates the complete route payload offline, then
+3. `wsbx.invoice.identify` checks OCR; authorized `wsbx.invoice.add` verifies and
+   inserts a local PDF/OFD/image source into `我的票夹`; an exact duplicate is
+   returned as `existing`.
+4. `wsbx.draft.bind-project` returns the live item template.
+5. `wsbx.invoice.wallet.list` confirms the pending/used wallet state, and
+   `wsbx.invoice.list status=pending` checks the electronic-invoice pool.
+6. `wsbx.invoice.bind` binds the selected wallet invoice to a valid item.
+   If binding reports same-person witness validation, use
+   `wsbx.employee.search` and authorized `wsbx.invoice.add-witness` with an
+   accurate note before retrying.
+7. `wsbx.attachment.types` and `wsbx.attachment.list` determine required files.
+8. `wsbx.attachment.upload` adds supporting evidence.
+9. `wsbx.draft.preview` validates the complete route payload offline, then
    `wsbx.draft.save` saves the draft.
-9. `wsbx.draft.get` and `wsbx.draft.status` are the final inspection before any
+10. `wsbx.draft.get` and `wsbx.draft.status` are the final inspection before any
    separately authorized `wsbx.draft.submit`.
 
 ## Stop Conditions

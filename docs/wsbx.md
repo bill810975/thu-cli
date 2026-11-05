@@ -75,6 +75,53 @@ thu-cli describe thu wsbx.intl.budget
 The default route remains `052` for backward compatibility. Pass `ywlx`
 explicitly for every new workflow.
 
+## Add receipts to the wallet
+
+An invoice must be in `我的票夹` before it can be bound to a reimbursement.
+The CLI now performs the same local-file ingestion path without requiring the
+web app:
+
+```sh
+# OCR and inspect the normalized result without changing the wallet
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.invoice.identify \
+  --args '{"file":"/absolute/path/to/invoice.pdf"}'
+
+# OCR, verify, and add it to the wallet
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.invoice.add \
+  --args '{"file":"/absolute/path/to/invoice.pdf"}' --confirm
+
+# Search the wallet after ingestion
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.invoice.wallet.list \
+  --args '{"query":"INVOICE_NUMBER","status":"pending"}'
+```
+
+`invoice.identify` accepts a regular, non-symlink PDF, OFD, image, or ZIP file
+up to 30 MiB. `invoice.add` runs OCR, normalizes the verification fields,
+checks for an exact existing invoice number, and then calls
+`invoice/verify/save`. A repeated add returns the existing wallet record instead
+of blindly inserting it again. The result separates `added`, `existing`, and
+`failed` documents and sets `complete` only when no document failed.
+
+Some departments require a witness when the handler, project owner, and invoice
+handler are the same person. WSBX then rejects binding with its business error.
+Search the employee directory and add the witness before retrying the bind:
+
+```sh
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.employee.search --args '{"query":"EMPLOYEE_NAME_OR_ID"}'
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.invoice.add-witness \
+  --args-file PRIVATE_WITNESS_ARGS.json --confirm
+```
+
+The witness argument file contains `invoice_numbers`, `witness`,
+`witness_name`, and an accurate business `note`. Camera capture and mobile QR
+upload are still outside the CLI; provide the downloaded source file instead.
+
 ## Preview a route payload offline
 
 `wsbx.draft.preview` builds and checks the route-specific shape without
@@ -92,12 +139,16 @@ The same argument file can be used with `wsbx.draft.save` or
 
 ## Common draft sequence
 
-1. Find the exact `bmbh`/`xmbh` in `wsbx.project.list`.
-2. Search for an existing draft with `wsbx.draft.list`.
-3. If a new draft is authorized, run `wsbx.draft.create` with the chosen
+1. Classify the receipt, then use `wsbx.invoice.identify` and
+   `wsbx.invoice.add` to put it in the wallet when it is not already there.
+2. Add a required witness with `wsbx.employee.search` and
+   `wsbx.invoice.add-witness` before reporting an unexplained bind rejection.
+3. Find the exact `bmbh`/`xmbh` in `wsbx.project.list`.
+4. Search for an existing draft with `wsbx.draft.list`.
+5. If a new draft is authorized, run `wsbx.draft.create` with the chosen
    `ywlx`.
-4. Bind the project with `wsbx.draft.bind-project`.
-5. Read the live route template:
+6. Bind the project with `wsbx.draft.bind-project`.
+7. Read the live route template:
 
    ```sh
    thu-cli ... thu wsbx.draft.template \
@@ -111,12 +162,12 @@ The same argument file can be used with `wsbx.draft.save` or
    - `06`: `common/tempInfo`
    - `1206`: `intl/travel/init`
 
-6. Bind unused invoices with `wsbx.invoice.bind`.
-7. Read and upload the required files with `wsbx.attachment.types`,
+8. Bind unused wallet invoices with `wsbx.invoice.bind`.
+9. Read and upload the required files with `wsbx.attachment.types`,
    `wsbx.attachment.list`, and `wsbx.attachment.upload`.
-8. Save with `wsbx.draft.save`.
-9. Inspect with `wsbx.draft.get` and `wsbx.draft.status`.
-10. Submit separately only after explicit authorization for the exact receipt,
+10. Save with `wsbx.draft.save`.
+11. Inspect with `wsbx.draft.get` and `wsbx.draft.status`.
+12. Submit separately only after explicit authorization for the exact receipt,
     project, amount, expense items, attachments, and payment rows.
 
 Invoice binding is route-aware:
@@ -144,10 +195,15 @@ Argument essentials:
   "description": "OPTIONAL_DETAIL",
   "items": [],
   "payments": {},
-  "is_online": false,
-  "no_paper": false
+  "is_online": true,
+  "no_paper": true
 }
 ```
+
+For domestic e-invoice daily reimbursement (`052`), `is_online=true` and
+`no_paper=true` are the CLI defaults. Submission then uses workflow state `8`
+(online push). Pass either value as `false` only for an explicitly different
+approved workflow; the builder also accepts the strings `"1"` and `"0"`.
 
 Each selected `items` row carries the live template's `jjflkmbh`,
 `jjflkmmc`, electronic-invoice amount/count fields, and paper-receipt
@@ -329,15 +385,16 @@ guard fields only when absent. Preview the merged result before a write.
 - A timed-out write may already have reached WSBX. Inspect draft, invoice, file,
   and workflow state before retrying; mutations are never retried automatically.
 - `wsbx.draft.delete` permanently deletes a draft and is not an undo operation.
-- The WSBX client does not solve CAPTCHAs, sign approval decisions, complete
-  invoice OCR/mobile upload flows, or operate a payment wallet.
+- The WSBX client does not solve CAPTCHAs, sign approval decisions, capture a
+  receipt through a mobile camera/QR flow, or make a bank/card payment.
 - International Office approval, exchange-budget approval, foreign-contract tax
   filing, Bank of China pre-review, foreign exchange, and remittance are separate
   external workflows. A saved `1206` draft is not proof that a university
   remittance has been paid.
 - Keep private argument files at mode `600` and remove them after use.
 
-The `052` project-binding/draft-save path was previously checked against a live
-account. The added `051`, `06`, `19`, and `1206` contracts are reconstructed
-from the current WSBX frontend and covered by offline fixtures; live account
-verification remains an explicit release boundary.
+The `052` project-binding/draft-save path, local receipt OCR/verification,
+wallet insertion, witness assignment, and invoice binding have been checked
+against a live account. The `051`, `06`, `19`, and `1206` contracts are
+reconstructed from the current WSBX frontend and covered by offline fixtures;
+live account verification remains an explicit release boundary.

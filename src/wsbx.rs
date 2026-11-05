@@ -165,6 +165,18 @@ fn flag_string(a: &Value, key: &str) -> &'static str {
     }
 }
 
+fn flag_string_default(a: &Value, key: &str, default: &'static str) -> Result<&'static str> {
+    match a.get(key) {
+        None | Some(Value::Null) => Ok(default),
+        Some(Value::Bool(true)) => Ok("1"),
+        Some(Value::Bool(false)) => Ok("0"),
+        Some(Value::String(value)) if value == "0" || value == "1" => {
+            Ok(if value == "1" { "1" } else { "0" })
+        }
+        Some(_) => bail!("{key} must be a boolean or the string \"0\" or \"1\""),
+    }
+}
+
 fn delivery_option(a: &Value, key: &str, submit: bool) -> Result<String> {
     match a.get(key) {
         None | Some(Value::Null) => Ok(if submit { "0" } else { "" }.to_owned()),
@@ -208,6 +220,280 @@ fn invoice_list_status(a: &Value) -> Result<&'static str> {
         Some(_) => bail!(
             "status must be pending, unused, waiting, used, reimbursed, history, completed, 1, or 0"
         ),
+    }
+}
+
+fn invoice_wallet_status(a: &Value) -> Result<&'static str> {
+    match a.get("status").and_then(Value::as_str).unwrap_or("pending") {
+        "pending" | "unused" | "waiting" | "1" => Ok("1"),
+        "used" | "reimbursed" | "history" | "completed" | "0" => Ok("0"),
+        _ => bail!("status must be pending, unused, waiting, used, reimbursed, history, completed, 1, or 0"),
+    }
+}
+
+fn invoice_wallet_search(
+    user_id: &str,
+    status: &str,
+    query: &str,
+    page_size: u64,
+    page_number: u64,
+) -> Value {
+    json!({
+        "bqids": [],
+        "fpje": "",
+        "dfdw": "",
+        "fkdwmc": "",
+        "kpnr": "",
+        "dzfph": "",
+        "zmr": "",
+        "jsr": "",
+        "sqrbh": "",
+        "bsqrbh": "",
+        "fpStatus": status,
+        "userId": user_id,
+        "fpxx": query,
+        "pjlxList": [],
+        "orderParam": "",
+        "bz": "",
+        "ywbh": "",
+        "yydh": "",
+        "fpyjModify": "",
+        "sfsqth": "1",
+        "pageSize": page_size,
+        "pageNumber": page_number,
+        "current": page_number,
+        "folderId": null,
+        "excludeFolderId": null
+    })
+}
+
+fn invoice_file_path(a: &Value) -> Result<PathBuf> {
+    const SUPPORTED_EXTENSIONS: &[&str] = &["pdf", "ofd", "zip", "bmp", "jpg", "jpeg", "png"];
+
+    let value = required(a, "file")?;
+    let path = PathBuf::from(value);
+    let metadata =
+        fs::symlink_metadata(&path).context("Could not inspect the invoice source file")?;
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        bail!("Invoice source must be a regular file, not a symlink")
+    }
+    if metadata.len() > MAX_UPLOAD_BYTES {
+        bail!("Invoice source exceeds the 30 MiB safety limit")
+    }
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(str::to_ascii_lowercase)
+        .ok_or_else(|| anyhow!("Invoice source must have a supported file extension"))?;
+    if !SUPPORTED_EXTENSIONS.contains(&extension.as_str()) {
+        bail!(
+            "Unsupported invoice source extension {extension}; use PDF, OFD, ZIP, BMP, JPG, JPEG, or PNG"
+        )
+    }
+    Ok(path)
+}
+
+fn sanitized_ocr_documents(result: &Value) -> Result<Vec<Value>> {
+    let documents = result["data"]
+        .as_array()
+        .ok_or_else(|| anyhow!("Invoice OCR returned no document array"))?;
+    documents
+        .iter()
+        .enumerate()
+        .map(|(index, document)| {
+            let code = document["code"].as_str().unwrap_or("unknown");
+            if code != "normal" {
+                let message = document["outMessage"]
+                    .as_str()
+                    .unwrap_or("invoice OCR failed");
+                bail!(
+                    "Invoice OCR document {} failed with {code}: {message}",
+                    index + 1
+                )
+            }
+            let mut safe = document
+                .as_object()
+                .cloned()
+                .ok_or_else(|| anyhow!("Invoice OCR document must be a JSON object"))?;
+            for field in ["cutfile", "base64", "fileBase64", "zipBase64"] {
+                safe.remove(field);
+            }
+            for field in safe.keys().cloned().collect::<Vec<_>>() {
+                if field.ends_with("_zxd") {
+                    safe.remove(&field);
+                }
+            }
+            Ok(Value::Object(safe))
+        })
+        .collect()
+}
+
+fn invoice_inv_type(ocr_type: &str) -> &str {
+    match ocr_type {
+        "0" => "9",
+        "1" => "8",
+        "2" => "4",
+        "3" => "5",
+        "5" => "1",
+        "6" => "0",
+        "7" => "6",
+        "8" => "11",
+        "10" => "7",
+        "12" => "10",
+        "14" => "0",
+        "16" => "16",
+        "18" => "12",
+        value => value,
+    }
+}
+
+fn invoice_ocr_verify_data(document: &Value, file: &Path) -> Result<Value> {
+    let object = document
+        .as_object()
+        .ok_or_else(|| anyhow!("Invoice OCR document must be a JSON object"))?;
+    let mut result = object.clone();
+    for field in [
+        "code",
+        "outMessage",
+        "cutfile",
+        "base64",
+        "fileBase64",
+        "zipBase64",
+    ] {
+        result.remove(field);
+    }
+    for field in result.keys().cloned().collect::<Vec<_>>() {
+        if field.ends_with("_zxd") {
+            result.remove(&field);
+        }
+    }
+
+    let ocr_type = object
+        .get("fplx")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let inv_type = invoice_inv_type(ocr_type);
+    let file_name = file
+        .file_name()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| anyhow!("Invoice source filename must be valid UTF-8"))?;
+    let file_type = file
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(str::to_ascii_lowercase)
+        .ok_or_else(|| anyhow!("Invoice source must have a supported file extension"))?;
+    let date = object
+        .get("kprq")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .chars()
+        .filter(char::is_ascii_digit)
+        .collect::<String>();
+    let verification_code = object
+        .get("fpjym")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .chars()
+        .rev()
+        .take(6)
+        .collect::<String>()
+        .chars()
+        .rev()
+        .collect::<String>();
+    let fpje = object
+        .get("fpje")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let sqje = object
+        .get("sqje")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let amount = if inv_type == "50" {
+        let fpje_number = fpje.parse::<f64>().unwrap_or_default();
+        let sqje_number = sqje.parse::<f64>().unwrap_or_default();
+        if sqje_number > fpje_number {
+            sqje
+        } else {
+            fpje
+        }
+    } else {
+        fpje
+    };
+
+    let empty = json!("");
+    let field = |name: &str| object.get(name).cloned().unwrap_or_else(|| empty.clone());
+    for key in [
+        "fpdm",
+        "fphm",
+        "kprq",
+        "jym",
+        "yzm",
+        "pickey2",
+        "pickey3",
+        "isfpyzm",
+        "zje",
+        "zje_tax",
+        "fplx",
+        "funcClassify",
+        "invType",
+        "travellerName",
+        "departTime",
+        "arriveTime",
+        "departSite",
+        "arriveSite",
+        "vehicleNum",
+        "pb",
+        "kpnr",
+        "kpdwmc",
+        "fwlb",
+        "fileName",
+        "ywlx",
+        "invSource",
+        "fpfjuuid",
+        "cph",
+        "zjh",
+        "scsj",
+        "xcsj",
+        "pdfFilePath",
+        "zipFilePath",
+        "xsfmc",
+        "lb",
+        "lbmc",
+        "route",
+        "gmfmc",
+        "sj",
+        "sfsmj",
+    ] {
+        result.insert(key.into(), field(key));
+    }
+    result.insert("kprq".into(), json!(date));
+    result.insert("jym".into(), json!(verification_code));
+    result.insert("fplx".into(), json!(ocr_type));
+    result.insert("invType".into(), json!(inv_type));
+    result.insert("zje".into(), json!(amount));
+    result.insert("zje_tax".into(), field("fpjetax"));
+    result.insert("fileName".into(), json!(file_name));
+    result.insert("streamFileName".into(), json!(file_name));
+    result.insert("fileType".into(), json!(file_type));
+    result.insert("ywlx".into(), json!("113"));
+    result.insert("invSource".into(), json!("0"));
+    Ok(Value::Object(result))
+}
+
+fn upload_content_type(path: &Path) -> &'static str {
+    match path
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
+        Some("pdf") => "application/pdf",
+        Some("zip") => "application/zip",
+        Some("bmp") => "image/bmp",
+        Some("jpg" | "jpeg") => "image/jpeg",
+        Some("png") => "image/png",
+        Some("ofd") => "application/ofd",
+        _ => "application/octet-stream",
     }
 }
 
@@ -290,6 +576,10 @@ fn encrypted_fields(data: &Value) -> Result<(Value, Zeroizing<String>)> {
     let encrypted = aes_encrypt(&plaintext, &key)?;
     let sec_key = rsa_encrypt_key(&key)?;
     Ok((json!({"data": encrypted, "encSecKey": sec_key}), key))
+}
+
+fn encrypted_upload_fields(data: &Value) -> Result<(Value, Zeroizing<String>)> {
+    encrypted_fields(&json!({"data": data}))
 }
 
 fn decrypt_response(body: &[u8], key: &str) -> Result<Value> {
@@ -500,11 +790,13 @@ fn daily_payload(a: &Value, submit: bool) -> Result<Value> {
         .ok_or_else(|| anyhow!("items must be a JSON array"))?;
     let items = selected_items(items, submit)?;
     let payments = payments(a)?;
-    let is_online = flag_string(a, "is_online") == "1";
-    let no_paper = delivery_option(a, "no_paper", submit)?;
+    // Finance's normal domestic e-invoice path is paperless with online push.
+    // Callers can still explicitly override either choice with false or "0".
+    let is_online = flag_string_default(a, "is_online", "1")?;
+    let no_paper = flag_string_default(a, "no_paper", "1")?;
     let state = if !submit {
         "0"
-    } else if is_online {
+    } else if is_online == "1" {
         "8"
     } else {
         "5"
@@ -519,7 +811,7 @@ fn daily_payload(a: &Value, submit: bool) -> Result<Value> {
         },
         "lxdh": phone,
         "zt": state,
-        "isOnline": if is_online { "1" } else { "0" },
+        "isOnline": is_online,
         "noPaper": no_paper,
         "cjkList": payments["cjkList"],
         "gwkList": payments["gwkList"],
@@ -1021,13 +1313,36 @@ fn route_payload_from_external(
         bail!("payload.ywbh must exactly match the ywbh argument")
     }
     payload.insert("saveType".to_owned(), json!(if submit { "1" } else { "0" }));
-    let no_paper = delivery_option(a, "no_paper", submit)?;
-    let online = flag_string(a, "is_online");
+    let no_paper = if route == ReimbursementRoute::Daily {
+        flag_string_default(a, "no_paper", "1")?.to_owned()
+    } else {
+        delivery_option(a, "no_paper", submit)?
+    };
+    let online = if route == ReimbursementRoute::Daily {
+        flag_string_default(a, "is_online", "1")?
+    } else {
+        flag_string(a, "is_online")
+    };
     match route {
         ReimbursementRoute::Daily => {
+            payload.entry("zt".to_owned()).or_insert_with(|| {
+                json!(if !submit {
+                    "0"
+                } else if online == "1" {
+                    "8"
+                } else {
+                    "5"
+                })
+            });
             payload
                 .entry("bxsxType".to_owned())
                 .or_insert_with(|| json!("zdhb"));
+            payload
+                .entry("isOnline".to_owned())
+                .or_insert_with(|| json!(online));
+            payload
+                .entry("noPaper".to_owned())
+                .or_insert_with(|| json!(no_paper));
             insert_payment_lists(&mut payload, a)?;
         }
         ReimbursementRoute::Smart => {
@@ -1354,14 +1669,23 @@ impl<'a> WsbxClient<'a> {
             bail!("wbx API response exceeds the safety limit")
         }
         if !status.is_success() {
-            let detail = decrypt_response(&body, &aes_key).ok().and_then(|value| {
-                let code = envelope_code(&value)?;
-                let message = value
-                    .get("msg")
-                    .and_then(Value::as_str)
-                    .unwrap_or("request rejected");
-                Some(format!("{code}: {message}"))
-            });
+            let detail = decrypt_response(&body, &aes_key)
+                .ok()
+                .and_then(|value| {
+                    let code = envelope_code(&value)?;
+                    let message = value
+                        .get("msg")
+                        .and_then(Value::as_str)
+                        .unwrap_or("request rejected");
+                    Some(format!("{code}: {message}"))
+                })
+                .or_else(|| {
+                    std::str::from_utf8(&body)
+                        .ok()
+                        .map(|text| text.split_whitespace().collect::<Vec<_>>().join(" "))
+                        .filter(|text| !text.is_empty())
+                        .map(|text| text.chars().take(800).collect())
+                });
             match detail {
                 Some(detail) => bail!("wbx API returned HTTP {} ({detail})", status.as_u16()),
                 None => bail!("wbx API returned HTTP {}", status.as_u16()),
@@ -1455,6 +1779,31 @@ impl<'a> WsbxClient<'a> {
         file: &Path,
         fields: Value,
     ) -> Result<Value> {
+        let filename = file
+            .file_name()
+            .and_then(|name| name.to_str())
+            .filter(|name| !name.is_empty())
+            .ok_or_else(|| anyhow!("Upload filename must be valid UTF-8"))?;
+        self.upload_as(
+            path,
+            header,
+            file,
+            filename,
+            upload_content_type(file),
+            fields,
+        )
+        .await
+    }
+
+    async fn upload_as(
+        &mut self,
+        path: &str,
+        header: Option<&str>,
+        file: &Path,
+        part_filename: &str,
+        part_content_type: &str,
+        fields: Value,
+    ) -> Result<Value> {
         self.ensure_authenticated().await?;
         let metadata = fs::metadata(file).context("Could not inspect upload file")?;
         if !metadata.is_file() {
@@ -1463,18 +1812,12 @@ impl<'a> WsbxClient<'a> {
         if metadata.len() > MAX_UPLOAD_BYTES {
             bail!("Upload file exceeds the 30 MiB safety limit")
         }
-        let filename = file
-            .file_name()
-            .and_then(|name| name.to_str())
-            .filter(|name| !name.is_empty())
-            .ok_or_else(|| anyhow!("Upload filename must be valid UTF-8"))?
-            .to_owned();
         let bytes = fs::read(file).context("Could not read upload file")?;
         let part = Part::bytes(bytes)
-            .file_name(filename)
-            .mime_str("application/octet-stream")
+            .file_name(part_filename.to_owned())
+            .mime_str(part_content_type)
             .context("Invalid upload content type")?;
-        let (encrypted, aes_key) = encrypted_fields(&fields)?;
+        let (encrypted, aes_key) = encrypted_upload_fields(&fields)?;
         let data_header = encrypted["data"]
             .as_str()
             .ok_or_else(|| anyhow!("Encrypted upload fields are invalid"))?;
@@ -1489,6 +1832,8 @@ impl<'a> WsbxClient<'a> {
             .header("token", token)
             .header("Enc-Data", data_header)
             .header("Enc-Sec-Key", sec_header)
+            .header("Origin", "https://wsbx.tsinghua.edu.cn")
+            .header("Referer", "https://wsbx.tsinghua.edu.cn/wsyy/fpgl")
             .multipart(Form::new().part("file", part))
             .timeout(Duration::from_secs(300))
             .send()
@@ -1497,9 +1842,7 @@ impl<'a> WsbxClient<'a> {
         if matches!(response.status().as_u16(), 401 | 403) {
             bail!("wbx authentication expired during upload; the request outcome may be uncertain")
         }
-        if !response.status().is_success() {
-            bail!("wbx upload returned HTTP {}", response.status().as_u16())
-        }
+        let status = response.status();
         let headers = response.headers().clone();
         let body = response
             .bytes()
@@ -1507,6 +1850,39 @@ impl<'a> WsbxClient<'a> {
             .context("Could not read wsbx upload response")?;
         if body.len() as u64 > MAX_API_RESPONSE {
             bail!("wbx upload response exceeds the safety limit")
+        }
+        if !status.is_success() {
+            let detail = decrypt_response(&body, &aes_key)
+                .ok()
+                .and_then(|value| {
+                    let code = envelope_code(&value)?;
+                    let message = value
+                        .get("msg")
+                        .and_then(Value::as_str)
+                        .unwrap_or("request rejected");
+                    Some(format!("{code}: {message}"))
+                })
+                .or_else(|| {
+                    std::str::from_utf8(&body)
+                        .ok()
+                        .map(|text| text.split_whitespace().collect::<Vec<_>>().join(" "))
+                        .filter(|text| !text.is_empty())
+                        .map(|text| text.chars().take(800).collect())
+                });
+            match detail {
+                Some(detail) => {
+                    bail!("wbx upload returned HTTP {} ({detail})", status.as_u16())
+                }
+                None => bail!(
+                    "wbx upload returned HTTP {} (content-type {}, body {} bytes)",
+                    status.as_u16(),
+                    headers
+                        .get("content-type")
+                        .and_then(|value| value.to_str().ok())
+                        .unwrap_or("unknown"),
+                    body.len()
+                ),
+            }
         }
         if let Some(new_token) = response_token(&headers) {
             self.auth.as_mut().ok_or_else(auth_error)?.token = new_token;
@@ -1631,6 +2007,62 @@ async fn bind_shared_invoices(
     bail!("invoice binding did not converge after four explicit server-directed passes; inspect the draft before retrying")
 }
 
+async fn identify_invoice_documents(
+    client: &mut WsbxClient<'_>,
+    file: &Path,
+) -> Result<Vec<Value>> {
+    let user_id = user_id(client)?;
+    let user_name = client
+        .auth
+        .as_ref()
+        .map(|auth| auth.user_name.clone())
+        .ok_or_else(auth_error)?;
+    let result = client
+        .upload(
+            "/invoice/identify",
+            Some("invoice"),
+            file,
+            json!({
+                "userId": user_id,
+                "userName": user_name
+            }),
+        )
+        .await?;
+    result["data"]
+        .as_array()
+        .cloned()
+        .ok_or_else(|| anyhow!("Invoice OCR returned no document array"))
+}
+
+fn invoice_wallet_matches(invoice: &Value, invoice_number: &str) -> bool {
+    ["dzfph", "fphm"]
+        .iter()
+        .any(|key| invoice.get(*key).and_then(Value::as_str) == Some(invoice_number))
+}
+
+async fn invoice_wallet_entry(
+    client: &mut WsbxClient<'_>,
+    invoice_number: &str,
+) -> Result<Option<Value>> {
+    let user_id = user_id(client)?;
+    for status in ["1", "0"] {
+        let result = client
+            .post_read(
+                "/quick/invoice/getQuickList",
+                invoice_wallet_search(&user_id, status, invoice_number, 20, 1),
+                Some("invoice"),
+            )
+            .await?;
+        if let Some(invoice) = result["data"]["list"].as_array().and_then(|list| {
+            list.iter()
+                .find(|invoice| invoice_wallet_matches(invoice, invoice_number))
+        }) {
+            return Ok(Some(invoice.clone()));
+        }
+    }
+    Ok(None)
+}
+
 fn user_id(client: &WsbxClient<'_>) -> Result<String> {
     client
         .auth
@@ -1673,13 +2105,18 @@ pub fn operations() -> Vec<Value> {
         json!({"name":"wsbx.user","mutating":false,"description":"Verify reimbursement SSO and return the current user profile","required":[],"optional":[],"upstream":"wsbx login/sso + userInfo"}),
         json!({"name":"wsbx.business-types","mutating":false,"description":"List enabled reimbursement business types","required":[],"optional":[],"upstream":"myReceipts/getYwlxs/get"}),
         json!({"name":"wsbx.project.list","mutating":false,"description":"Search projects available to the current user","required":[],"optional":["ywlx","query","department","principal","page_size","include_zero_balance"],"upstream":"common/funds/list"}),
+        json!({"name":"wsbx.employee.search","mutating":false,"description":"Search campus employees by employee number or name","required":["query"],"optional":["page_size"],"upstream":"common/employee/list"}),
         json!({"name":"wsbx.draft.list","mutating":false,"description":"List reimbursement drafts or submitted receipts","required":[],"optional":["ywlx","status","page_size","route","delegated","filter_delegation"],"upstream":"todoEs/getTodoLi"}),
         json!({"name":"wsbx.draft.get","mutating":false,"description":"Read a reimbursement draft using the route-specific detail endpoint","required":["ywbh"],"optional":["ywlx"],"upstream":"rmb/info/get or intl/travel/init"}),
-        json!({"name":"wsbx.draft.preview","mutating":false,"description":"Build and validate a route-specific save/submit payload locally without authentication or network access","required":["ywbh"],"optional":["ywlx","project","phone","purpose","description","items","payments","no_paper","is_online","base_info","invoice_list","paper_items","travel","conference","conference_base","intl","intl_budget","travelers","expense_rows","actual_line","actual_start_date","actual_end_date","payload","operator","operator_name","submit"],"upstream":"local payload builder"}),
+        json!({"name":"wsbx.draft.preview","mutating":false,"description":"Build and validate a route-specific save/submit payload locally; daily 052 defaults to paperless online push","required":["ywbh"],"optional":["ywlx","project","phone","purpose","description","items","payments","no_paper","is_online","base_info","invoice_list","paper_items","travel","conference","conference_base","intl","intl_budget","travelers","expense_rows","actual_line","actual_start_date","actual_end_date","payload","operator","operator_name","submit"],"upstream":"local payload builder"}),
         json!({"name":"wsbx.draft.status","mutating":false,"description":"Read the workflow state of a receipt","required":["ywbh"],"optional":[],"upstream":"common/get/ywbxr"}),
         json!({"name":"wsbx.draft.create","mutating":true,"description":"Allocate a new reimbursement business number without submitting a receipt","required":[],"optional":["ywlx"],"upstream":"common/ywbh/get"}),
         json!({"name":"wsbx.draft.template","mutating":false,"description":"Read the route-specific expense template or international-travel initialization data","required":["ywbh","project"],"optional":["ywlx"],"upstream":"zdhb/template/get, common/templateInfo/get, common/tempInfo, or intl/travel/init"}),
         json!({"name":"wsbx.draft.bind-project","mutating":true,"description":"Bind a project to a draft and return its reimbursement-item template","required":["ywbh","project"],"optional":["ywlx","old_project","operator"],"upstream":"common/updateXmInfo"}),
+        json!({"name":"wsbx.invoice.identify","mutating":false,"description":"OCR and classify a PDF, OFD, image, or ZIP invoice source without adding it to the receipt wallet","required":["file"],"optional":[],"upstream":"invoice/identify"}),
+        json!({"name":"wsbx.invoice.add","mutating":true,"description":"OCR, verify, and add invoice source files to the receipt wallet without creating a reimbursement draft","required":["file"],"optional":["folder_id","sfhx","sfzn","ywbh","ocr_data"],"upstream":"invoice/identify + invoice/verify/save"}),
+        json!({"name":"wsbx.invoice.add-witness","mutating":true,"description":"Add a witness/proof person to one or more receipt-wallet invoices","required":["invoice_numbers","witness","witness_name"],"optional":["note"],"upstream":"invoice/addZmr"}),
+        json!({"name":"wsbx.invoice.wallet.list","mutating":false,"description":"List invoices in the receipt wallet by pending or used state","required":[],"optional":["query","page_size","page_number","status"],"upstream":"quick/invoice/getQuickList"}),
         json!({"name":"wsbx.invoice.list","mutating":false,"description":"List electronic invoices by pending or used reimbursement state","required":[],"optional":["ywbh","query","page_size","status"],"upstream":"invoice/list"}),
         json!({"name":"wsbx.invoice.bind","mutating":true,"description":"Bind selected electronic invoices using the selected reimbursement route","required":["ywbh","item","invoice_numbers"],"optional":["ywlx","fpid","contract"],"upstream":"zdhb/dzfp/bind or invoice/binding"}),
         json!({"name":"wsbx.invoice.unbind","mutating":true,"description":"Unbind one invoice and its linked route data using the selected reimbursement route","required":["ywbh","invoice_number"],"optional":["ywlx","employee","ticket_state","travel_type"],"upstream":"zdhb/dzfp/mx/delete, clf/gn/dzfpHk/delete, invoice/release/use, or conference cleanup endpoints"}),
@@ -1689,8 +2126,8 @@ pub fn operations() -> Vec<Value> {
         json!({"name":"wsbx.attachment.list","mutating":false,"description":"List attachments on a draft","required":["ywbh"],"optional":["ywlx"],"upstream":"file/get/list"}),
         json!({"name":"wsbx.attachment.upload","mutating":true,"description":"Upload one attachment to a draft","required":["ywbh","file","attachment_type"],"optional":["ywlx"],"upstream":"file/common/upload/file"}),
         json!({"name":"wsbx.attachment.delete","mutating":true,"description":"Delete one attachment from a draft","required":["attachment"],"optional":["fjly"],"upstream":"file/uploadfile/delete"}),
-        json!({"name":"wsbx.draft.save","mutating":true,"description":"Validate and save a daily, smart/foreign-invoice, domestic-travel, conference, or international-travel draft","required":["ywbh"],"optional":["ywlx","project","phone","purpose","description","items","payments","no_paper","is_online","base_info","invoice_list","paper_items","travel","conference","conference_base","intl","intl_budget","travelers","expense_rows","actual_line","actual_start_date","actual_end_date","payload","operator","operator_name"],"upstream":"pay/whole/submit, clf/gn/tmp/save, or intl/travel/save"}),
-        json!({"name":"wsbx.draft.submit","mutating":true,"description":"Submit a fully prepared route-specific reimbursement; inspect server state before retrying","required":["ywbh"],"optional":["ywlx","project","phone","purpose","description","items","payments","no_paper","is_online","base_info","invoice_list","paper_items","travel","conference","conference_base","intl","intl_budget","travelers","expense_rows","actual_line","actual_start_date","actual_end_date","payload","operator","operator_name"],"upstream":"pay/whole/submit, clf/gn/tmp/save, or intl/travel/save"}),
+        json!({"name":"wsbx.draft.save","mutating":true,"description":"Validate and save a route-specific draft; daily 052 defaults to paperless online push","required":["ywbh"],"optional":["ywlx","project","phone","purpose","description","items","payments","no_paper","is_online","base_info","invoice_list","paper_items","travel","conference","conference_base","intl","intl_budget","travelers","expense_rows","actual_line","actual_start_date","actual_end_date","payload","operator","operator_name"],"upstream":"pay/whole/submit, clf/gn/tmp/save, or intl/travel/save"}),
+        json!({"name":"wsbx.draft.submit","mutating":true,"description":"Submit a fully prepared route-specific reimbursement; daily 052 defaults to online push; inspect state before retrying","required":["ywbh"],"optional":["ywlx","project","phone","purpose","description","items","payments","no_paper","is_online","base_info","invoice_list","paper_items","travel","conference","conference_base","intl","intl_budget","travelers","expense_rows","actual_line","actual_start_date","actual_end_date","payload","operator","operator_name"],"upstream":"pay/whole/submit, clf/gn/tmp/save, or intl/travel/save"}),
         json!({"name":"wsbx.draft.delete","mutating":true,"description":"Permanently delete a draft by business number","required":["ywbh"],"optional":[],"upstream":"todoEs/receipt/delete"}),
         json!({"name":"wsbx.draft.revoke","mutating":true,"description":"Request withdrawal of a submitted receipt by business number","required":["ywbh"],"optional":[],"upstream":"todoEs/receipt/revoke"}),
         json!({"name":"wsbx.conference.budgets","mutating":false,"description":"Search approved conference budgets","required":[],"optional":["page_size","page_number","is_myself","budget_number","query","br"],"upstream":"hyf/ys/page"}),
@@ -1771,6 +2208,19 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                 data["searchFzr"] = json!(principal);
             }
             client.post_read("common/funds/list", data, None).await
+        }
+        "wsbx.employee.search" => {
+            client
+                .post_read(
+                    "/common/employee/list",
+                    json!({
+                        "condition": required(a, "query")?,
+                        "pageSize": u64_arg(a, "page_size", 20)?,
+                        "pageNumber": 1
+                    }),
+                    None,
+                )
+                .await
         }
         "wsbx.draft.list" => {
             let route = route_arg(a)?;
@@ -1908,6 +2358,154 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                 "template": template,
                 "template_error": template_error
             }))
+        }
+        "wsbx.invoice.identify" => {
+            let file = invoice_file_path(a)?;
+            let documents = identify_invoice_documents(&mut client, &file).await?;
+            let summaries = documents
+                .iter()
+                .map(|document| {
+                    Ok(json!({
+                        "ocr": sanitized_ocr_documents(&json!({"data":[document]}))?
+                            .into_iter()
+                            .next()
+                            .unwrap_or_else(|| json!({})),
+                        "verify_data": invoice_ocr_verify_data(document, &file)?
+                    }))
+                })
+                .collect::<Result<Vec<_>>>()?;
+            Ok(json!({
+                "file": file.file_name().and_then(|value| value.to_str()),
+                "documents": summaries
+            }))
+        }
+        "wsbx.invoice.add" => {
+            let file = invoice_file_path(a)?;
+            let documents = match a.get("ocr_data") {
+                Some(Value::Array(documents)) if !documents.is_empty() => documents.clone(),
+                Some(Value::Object(_)) => vec![a["ocr_data"].clone()],
+                Some(_) => bail!("ocr_data must be a JSON object or nonempty JSON array"),
+                None => identify_invoice_documents(&mut client, &file).await?,
+            };
+            let user_id = user_id(&client)?;
+            let ywbh = a.get("ywbh").and_then(Value::as_str).unwrap_or("");
+            let sfhx = a.get("sfhx").and_then(Value::as_str).unwrap_or("");
+            let sfzn = a.get("sfzn").and_then(Value::as_str).unwrap_or("1");
+            let folder_id = a.get("folder_id").and_then(Value::as_str).unwrap_or("");
+            let mut added = Vec::new();
+            let mut existing = Vec::new();
+            let mut failed = Vec::new();
+
+            for (index, document) in documents.iter().enumerate() {
+                let verify_data = invoice_ocr_verify_data(document, &file)?;
+                let invoice_number = verify_data["fphm"]
+                    .as_str()
+                    .filter(|value| !value.is_empty())
+                    .ok_or_else(|| {
+                        anyhow!("Invoice OCR document {} has no invoice number", index + 1)
+                    })?;
+                if let Some(invoice) = invoice_wallet_entry(&mut client, invoice_number).await? {
+                    existing.push(json!({
+                        "invoice_number": invoice_number,
+                        "status": invoice.get("zt").cloned().unwrap_or(Value::Null),
+                        "business_number": invoice.get("ywbh").cloned().unwrap_or(Value::Null)
+                    }));
+                    continue;
+                }
+
+                let result = client
+                    .post(
+                        "/invoice/verify/save",
+                        json!({
+                            "ocrData": serde_json::to_string(&verify_data)?,
+                            "ygbh": user_id,
+                            "ywbh": ywbh,
+                            "sfhx": sfhx,
+                            "sfzn": sfzn,
+                            "folderId": folder_id
+                        }),
+                        Some("invoice"),
+                    )
+                    .await?;
+                let status = &result["data"]["status"];
+                let succeeded = status.as_i64() == Some(0)
+                    || status.as_u64() == Some(0)
+                    || status.as_str() == Some("0");
+                if succeeded {
+                    let invoice = &result["data"]["fpInfo"];
+                    added.push(json!({
+                        "invoice_number": invoice_number,
+                        "amount": invoice.get("zje").cloned().unwrap_or(Value::Null),
+                        "invoice_type": invoice.get("type").cloned().unwrap_or(Value::Null),
+                        "verified": invoice.get("isyz").cloned().unwrap_or(Value::Null),
+                        "source_file_present": (["mongoFjName", "mongoFj"]
+                            .iter()
+                            .any(|key| invoice
+                                .get(*key)
+                                .and_then(Value::as_str)
+                                .is_some_and(|value| !value.is_empty())))
+                    }));
+                } else {
+                    failed.push(json!({
+                        "invoice_number": invoice_number,
+                        "message": result["data"]["msg"]
+                            .as_str()
+                            .or_else(|| result["msg"].as_str())
+                            .unwrap_or("WSBX rejected invoice verification")
+                    }));
+                }
+            }
+
+            Ok(json!({
+                "file": file.file_name().and_then(|value| value.to_str()),
+                "added": added,
+                "existing": existing,
+                "failed": failed,
+                "complete": failed.is_empty()
+            }))
+        }
+        "wsbx.invoice.add-witness" => {
+            let invoice_numbers = a
+                .get("invoice_numbers")
+                .and_then(Value::as_array)
+                .ok_or_else(|| anyhow!("invoice_numbers must be a JSON array"))?;
+            if invoice_numbers.is_empty() {
+                bail!("invoice_numbers must not be empty")
+            }
+            let invoice_numbers = invoice_numbers
+                .iter()
+                .map(|number| required(&json!({"number": number}), "number"))
+                .collect::<Result<Vec<_>>>()?;
+            client
+                .post(
+                    "/invoice/addZmr",
+                    json!({
+                        "dzfphs": invoice_numbers,
+                        "zmr": required(a, "witness")?,
+                        "zmrmc": required(a, "witness_name")?,
+                        "bz": a.get("note").and_then(Value::as_str).unwrap_or(""),
+                        "czr": user_id(&client)?,
+                        "czrmc": client.auth.as_ref().map(|auth| auth.user_name.as_str()).unwrap_or("")
+                    }),
+                    Some("invoice"),
+                )
+                .await
+        }
+        "wsbx.invoice.wallet.list" => {
+            let user_id = user_id(&client)?;
+            client
+                .post_read(
+                    "/quick/invoice/getQuickList",
+                    invoice_wallet_search(
+                        &user_id,
+                        invoice_wallet_status(a)?,
+                        a.get("query").and_then(Value::as_str).unwrap_or(""),
+                        u64_arg(a, "page_size", 20)?,
+                        u64_arg(a, "page_number", 1)?,
+                    ),
+                    Some("invoice"),
+                )
+                .await
         }
         "wsbx.invoice.list" => {
             client
@@ -2297,7 +2895,16 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                 .as_object_mut()
                 .ok_or_else(|| anyhow!("Saved reimbursement payload is invalid"))?
                 .remove("project");
-            let result = client.post(route.save_path(), payload, None).await?;
+            let result = client
+                .post(route.save_path(), payload, None)
+                .await
+                .with_context(|| {
+                    if submit {
+                        "WSBX rejected the submission; inspect the draft status and project data permission before retrying"
+                    } else {
+                        "WSBX rejected the draft save; inspect the draft before retrying"
+                    }
+                })?;
             let warnings = result["data"]["warnMessage"].clone();
             Ok(json!({
                 "business_number": ywbh,
@@ -2485,6 +3092,15 @@ mod tests {
     }
 
     #[test]
+    fn multipart_encryption_wraps_form_fields_in_data() {
+        let (encrypted, key) =
+            encrypted_upload_fields(&json!({"userId": "fixture", "ywbh": ""})).unwrap();
+        let plaintext = aes_decrypt(encrypted["data"].as_str().unwrap(), &key).unwrap();
+        let decoded: Value = serde_json::from_str(&plaintext).unwrap();
+        assert_eq!(decoded, json!({"data": {"userId": "fixture", "ywbh": ""}}));
+    }
+
+    #[test]
     fn endpoint_contract_is_bounded() {
         assert_eq!(
             api_url("/common/ywbh/get", None).unwrap().as_str(),
@@ -2507,6 +3123,36 @@ mod tests {
             "0"
         );
         assert!(invoice_list_status(&json!({"status":"invalid"})).is_err());
+    }
+
+    #[test]
+    fn invoice_wallet_queries_match_the_wallet_page_contract() {
+        assert_eq!(
+            invoice_wallet_status(&json!({"status":"pending"})).unwrap(),
+            "1"
+        );
+        assert_eq!(
+            invoice_wallet_status(&json!({"status":"completed"})).unwrap(),
+            "0"
+        );
+        assert!(invoice_wallet_status(&json!({"status":"invalid"})).is_err());
+        let query = invoice_wallet_search("fixture", "1", "INV-1", 20, 2);
+        assert_eq!(query["fpStatus"], "1");
+        assert_eq!(query["fpxx"], "INV-1");
+        assert_eq!(query["pageNumber"], 2);
+        assert_eq!(query["folderId"], Value::Null);
+    }
+
+    #[test]
+    fn invoice_wallet_deduplication_requires_the_exact_invoice_number() {
+        assert!(!invoice_wallet_matches(
+            &json!({"dzfph": "99990000000000000001-OTHER"}),
+            "99990000000000000001"
+        ));
+        assert!(invoice_wallet_matches(
+            &json!({"fphm": "99990000000000000001"}),
+            "99990000000000000001"
+        ));
     }
 
     #[test]
@@ -2558,9 +3204,57 @@ mod tests {
         .unwrap();
         assert_eq!(payload["saveType"], "0");
         assert_eq!(payload["zt"], "0");
-        assert_eq!(payload["noPaper"], "");
+        assert_eq!(payload["noPaper"], "1");
+        assert_eq!(payload["isOnline"], "1");
         assert_eq!(payload["bxsxType"], "zdhb");
         assert_eq!(payload["dszzList"], json!([]));
+    }
+
+    #[test]
+    fn daily_invoice_defaults_to_paperless_online_and_allows_explicit_override() {
+        let base = json!({
+            "ywbh": "YB0000000000001",
+            "project": {"bmbh": "999", "xmbh": "FIXTURE"},
+            "phone": "10000000000",
+            "items": [{
+                "jjflkmbh": "302",
+                "jjflkmmc": "差旅费",
+                "dzpjSbje": "10.00",
+                "dzpjFjzs": "1"
+            }]
+        });
+        let default = save_payload(&base, ReimbursementRoute::Daily, true, "fixture-user").unwrap();
+        assert_eq!(default["noPaper"], "1");
+        assert_eq!(default["isOnline"], "1");
+        assert_eq!(default["zt"], "8");
+
+        let mut overridden = base;
+        overridden["no_paper"] = json!(false);
+        overridden["is_online"] = json!(false);
+        let overridden =
+            save_payload(&overridden, ReimbursementRoute::Daily, true, "fixture-user").unwrap();
+        assert_eq!(overridden["noPaper"], "0");
+        assert_eq!(overridden["isOnline"], "0");
+        assert_eq!(overridden["zt"], "5");
+
+        let external = save_payload(
+            &json!({
+                "ywbh": "YB0000000000002",
+                "ywlx": "052",
+                "payload": {
+                    "ywbh": "YB0000000000002",
+                    "ybbxBaseInfo": {},
+                    "bxsxList": []
+                }
+            }),
+            ReimbursementRoute::Daily,
+            true,
+            "fixture-user",
+        )
+        .unwrap();
+        assert_eq!(external["noPaper"], "1");
+        assert_eq!(external["isOnline"], "1");
+        assert_eq!(external["zt"], "8");
     }
 
     #[test]
@@ -2756,6 +3450,8 @@ mod tests {
         for name in [
             "wsbx.draft.create",
             "wsbx.draft.bind-project",
+            "wsbx.invoice.add",
+            "wsbx.invoice.add-witness",
             "wsbx.invoice.bind",
             "wsbx.attachment.upload",
             "wsbx.draft.save",
@@ -2771,6 +3467,64 @@ mod tests {
                 "{name}"
             );
         }
+    }
+
+    #[test]
+    fn invoice_wallet_ingestion_is_part_of_the_cli_contract() {
+        let operations = operations();
+        for (name, required) in [
+            ("wsbx.employee.search", &["query"][..]),
+            ("wsbx.invoice.identify", &["file"][..]),
+            ("wsbx.invoice.add", &["file"][..]),
+            (
+                "wsbx.invoice.add-witness",
+                &["invoice_numbers", "witness", "witness_name"][..],
+            ),
+            ("wsbx.invoice.wallet.list", &[][..]),
+        ] {
+            let operation = operations
+                .iter()
+                .find(|operation| operation["name"] == name)
+                .unwrap_or_else(|| panic!("{name} must be discoverable"));
+            let declared = operation["required"].as_array().unwrap();
+            for argument in required {
+                assert!(
+                    declared.iter().any(|value| value == argument),
+                    "{name} must require {argument}"
+                );
+            }
+        }
+        assert!(operations
+            .iter()
+            .any(|operation| operation["name"] == "wsbx.invoice.add"
+                && operation["mutating"] == true));
+    }
+
+    #[test]
+    fn digital_invoice_ocr_is_normalized_for_verification() {
+        let data = invoice_ocr_verify_data(
+            &json!({
+                "code": "normal",
+                "fphm": "99990000000000000001",
+                "fpje": "21.71",
+                "sqje": "19.21",
+                "fpjym": "ABC1234567",
+                "fplx": "50",
+                "kprq": "2026-10-19",
+                "gmfmc": "清华大学",
+                "xsfmc": "Fixture Trading Co., Ltd."
+            }),
+            Path::new("digital_99990000000000000001.pdf"),
+        )
+        .unwrap();
+        assert_eq!(data["fphm"], "99990000000000000001");
+        assert_eq!(data["kprq"], "20261019");
+        assert_eq!(data["jym"], "234567");
+        assert_eq!(data["invType"], "50");
+        assert_eq!(data["zje"], "21.71");
+        assert_eq!(data["fileName"], "digital_99990000000000000001.pdf");
+        assert_eq!(data["fileType"], "pdf");
+        assert!(data.get("code").is_none());
     }
 
     #[tokio::test]

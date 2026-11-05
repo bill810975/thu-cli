@@ -2016,6 +2016,18 @@
       "upstream": "common/funds/list"
     },
     {
+      "description": "Search campus employees by employee number or name",
+      "mutating": false,
+      "name": "wsbx.employee.search",
+      "optional": [
+        "page_size"
+      ],
+      "required": [
+        "query"
+      ],
+      "upstream": "common/employee/list"
+    },
+    {
       "description": "List reimbursement drafts or submitted receipts",
       "mutating": false,
       "name": "wsbx.draft.list",
@@ -2043,7 +2055,7 @@
       "upstream": "rmb/info/get or intl/travel/init"
     },
     {
-      "description": "Build and validate a route-specific save/submit payload locally without authentication or network access",
+      "description": "Build and validate a route-specific save/submit payload locally; daily 052 defaults to paperless online push",
       "mutating": false,
       "name": "wsbx.draft.preview",
       "optional": [
@@ -2126,6 +2138,59 @@
         "project"
       ],
       "upstream": "common/updateXmInfo"
+    },
+    {
+      "description": "OCR and classify a PDF, OFD, image, or ZIP invoice source without adding it to the receipt wallet",
+      "mutating": false,
+      "name": "wsbx.invoice.identify",
+      "optional": [],
+      "required": [
+        "file"
+      ],
+      "upstream": "invoice/identify"
+    },
+    {
+      "description": "OCR, verify, and add invoice source files to the receipt wallet without creating a reimbursement draft",
+      "mutating": true,
+      "name": "wsbx.invoice.add",
+      "optional": [
+        "folder_id",
+        "sfhx",
+        "sfzn",
+        "ywbh",
+        "ocr_data"
+      ],
+      "required": [
+        "file"
+      ],
+      "upstream": "invoice/identify + invoice/verify/save"
+    },
+    {
+      "description": "Add a witness/proof person to one or more receipt-wallet invoices",
+      "mutating": true,
+      "name": "wsbx.invoice.add-witness",
+      "optional": [
+        "note"
+      ],
+      "required": [
+        "invoice_numbers",
+        "witness",
+        "witness_name"
+      ],
+      "upstream": "invoice/addZmr"
+    },
+    {
+      "description": "List invoices in the receipt wallet by pending or used state",
+      "mutating": false,
+      "name": "wsbx.invoice.wallet.list",
+      "optional": [
+        "query",
+        "page_size",
+        "page_number",
+        "status"
+      ],
+      "required": [],
+      "upstream": "quick/invoice/getQuickList"
     },
     {
       "description": "List electronic invoices by pending or used reimbursement state",
@@ -2247,7 +2312,7 @@
       "upstream": "file/uploadfile/delete"
     },
     {
-      "description": "Validate and save a daily, smart/foreign-invoice, domestic-travel, conference, or international-travel draft",
+      "description": "Validate and save a route-specific draft; daily 052 defaults to paperless online push",
       "mutating": true,
       "name": "wsbx.draft.save",
       "optional": [
@@ -2283,7 +2348,7 @@
       "upstream": "pay/whole/submit, clf/gn/tmp/save, or intl/travel/save"
     },
     {
-      "description": "Submit a fully prepared route-specific reimbursement; inspect server state before retrying",
+      "description": "Submit a fully prepared route-specific reimbursement; daily 052 defaults to online push; inspect state before retrying",
       "mutating": true,
       "name": "wsbx.draft.submit",
       "optional": [

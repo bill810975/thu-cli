@@ -41,9 +41,10 @@ For an agent-driven installation, give an agent the prompt in
   card, network, mail, invoices, THOS, GitLab, and other service operations.
 - Reimbursement drafts for daily (`052`), smart/foreign-invoice (`051`),
   domestic travel (`06`), conference (`19`), and international travel (`1206`),
-  including route-specific templates, invoices, attachments, payments,
-  international budgets, RMB/foreign-currency rows, save, submit, delete, and
-  withdrawal.
+  including local receipt OCR/verification and wallet insertion,
+  same-person witness assignment, route-specific templates, invoices,
+  attachments, payments, international budgets, RMB/foreign-currency rows,
+  save, submit, delete, and withdrawal.
 - Learn courses, notifications, files, homework, questionnaires, and downloads.
 - JSON output, operation discovery, explicit mutation confirmation, and
   non-overwriting downloads.
@@ -55,11 +56,11 @@ every campus service remain subject to the boundaries in
 [docs/COVERAGE.md](docs/COVERAGE.md).
 
 The daily reimbursement client has also been checked against a live account
-through project binding and draft save. The added smart/foreign-invoice,
-domestic-travel, conference, and international-travel contracts are reconstructed
-from the current WSBX frontend and covered by offline fixtures; they still need
-live account and entitlement verification. The client has deliberately not
-submitted a real approval.
+through local receipt OCR/verification, wallet insertion, witness assignment,
+invoice binding, project binding, and draft save. The added smart/foreign-invoice,
+domestic-travel, conference, and international-travel contracts are
+reconstructed from the current WSBX frontend and covered by offline fixtures;
+they still need live account and entitlement verification.
 
 ## Requirements
 
@@ -223,7 +224,7 @@ thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
 The SSO ticket and rotating reimbursement token are obtained on demand from the
 already-authenticated Info profile. The token is stored in a mode-`600` private
 sidecar and is never printed. See [docs/wsbx.md](docs/wsbx.md) for the complete
-draft, invoice, attachment, save and explicit-submit workflow.
+receipt-wallet, draft, invoice, attachment, save and explicit-submit workflow.
 
 ## Safety model
 
