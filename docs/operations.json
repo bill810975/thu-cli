@@ -2122,6 +2122,52 @@
       "upstream": "pay/method/get"
     },
     {
+      "description": "Read an existing approval workflow or generate WSBX's proposed workflow for a pending receipt",
+      "mutating": false,
+      "name": "wsbx.approval.workflow",
+      "optional": [
+        "ywlx",
+        "is_cwzg"
+      ],
+      "required": [
+        "ywbh"
+      ],
+      "upstream": "workflow/record/get + approve/workflow/get"
+    },
+    {
+      "description": "Check approver assignments and workflow rules before final approval submission",
+      "mutating": false,
+      "name": "wsbx.approval.check",
+      "optional": [
+        "ywlx",
+        "workflow",
+        "is_cwzg"
+      ],
+      "required": [
+        "ywbh"
+      ],
+      "upstream": "approve/spxxdl/check"
+    },
+    {
+      "description": "Finalize receipt state 8 by submitting its checked approval workflow",
+      "mutating": true,
+      "name": "wsbx.approval.submit",
+      "optional": [
+        "ywlx",
+        "workflow",
+        "is_cwzg",
+        "wzh_flag",
+        "note",
+        "lcid",
+        "lcmc",
+        "ywbh2"
+      ],
+      "required": [
+        "ywbh"
+      ],
+      "upstream": "approve/spxxdl/submit"
+    },
+    {
       "description": "Allocate a new reimbursement business number without submitting a receipt",
       "mutating": true,
       "name": "wsbx.draft.create",

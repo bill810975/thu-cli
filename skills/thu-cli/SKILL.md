@@ -266,6 +266,14 @@ Before `wsbx.draft.submit`, inspect both `wsbx.draft.get` and
 receipt and fields. Never retry an ambiguous submission; inspect status first.
 See the repository's `docs/wsbx.md` for argument structure.
 
+The daily `052` submission is two-phase in WSBX. `zt=8` means **pending
+approval submission**, not submitted. `draft.submit` now performs both phases;
+it reads or generates the approval workflow, runs `approval.check`, and then
+calls `approval.submit`. Treat only `zt=9` as entered approval. An existing
+`zt=8` receipt can be finalized by repeating `draft.submit` with `ywbh`, or by
+using `wsbx.approval.workflow`, `wsbx.approval.check`, and authorized
+`wsbx.approval.submit`.
+
 International-travel work starts from `wsbx.intl.budget` and uses
 `wsbx.intl.get`, `wsbx.intl.currency.split`, `wsbx.intl.invoices`,
 `wsbx.intl.invoice.update`, and `wsbx.intl.files` as needed. WSBX draft support

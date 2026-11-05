@@ -11,13 +11,13 @@
     "thu-learn-lib": "1b79b984f34a6f1ca0532beaf59abac55db7f52c"
   },
   "operation_counts": {
-    "thu": 176,
+    "thu": 179,
     "learn": 35,
     "app": 13
   },
   "tests": {
-    "total": 96,
-    "library": 81,
+    "total": 98,
+    "library": 83,
     "cli_unit": 2,
     "cli_integration": 13
   },

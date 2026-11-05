@@ -175,6 +175,29 @@ The same argument file can be used with `wsbx.draft.save` or
 13. Submit separately only after explicit authorization for the exact receipt,
     project, amount, expense items, attachments, and payment rows.
 
+For daily `052`, `wsbx.draft.submit` now completes both WSBX phases: it first
+creates the pending-approval receipt (`zt=8`), then reads or generates its
+approval workflow, validates every rank/approver, and calls
+`approve/spxxdl/submit`. Only `zt=9` means the receipt has actually entered
+approval. A `zt=8` result is still pending submission.
+
+The component operations remain available for diagnosis:
+
+```sh
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.approval.workflow --args '{"ywbh":"BUSINESS_NUMBER","ywlx":"052"}'
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.approval.check --args '{"ywbh":"BUSINESS_NUMBER","ywlx":"052"}'
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu wsbx.approval.submit \
+  --args '{"ywbh":"BUSINESS_NUMBER","ywlx":"052"}' --confirm
+```
+
+Calling `draft.submit` again on a receipt already in `zt=8` performs only the
+final workflow submission.
+
 Invoice binding is route-aware:
 
 - `052` uses `zdhb/dzfp/bind` and assigns the requested expense item directly.
@@ -408,6 +431,8 @@ guard fields only when absent. Preview the merged result before a write.
   `mutating:true` and requires `--confirm`.
 - `wsbx.draft.submit` creates a real approval request. It requires explicit
   authorization for the exact route and receipt.
+- `wsbx.approval.submit` is the final approval-routing mutation for a receipt
+  already in state `8`; it is normally reached through `draft.submit`.
 - A timed-out write may already have reached WSBX. Inspect draft, invoice, file,
   and workflow state before retrying; mutations are never retried automatically.
 - `wsbx.draft.delete` permanently deletes a draft and is not an undo operation.

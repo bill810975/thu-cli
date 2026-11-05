@@ -204,6 +204,9 @@ that the university paid the overseas beneficiary.
 - `wsbx.draft.submit` creates a real approval. Use it only after the user
   explicitly authorizes the exact receipt, project, category, amount,
   attachments, and payment rows.
+- For daily `052`, `zt=8` is still pending approval submission. The CLI's
+  `draft.submit` completes both phases and must reach `zt=9` before reporting
+  that the receipt entered approval.
 - Never submit automatically because the invoice was recognized or because the
   draft saved successfully.
 - Never expose cookies, tokens, full account records, bank data, or unrelated

@@ -92,6 +92,9 @@ into `052`. Domestic e-invoice daily reimbursement defaults to paperless
 11. `wsbx.draft.get`, `wsbx.draft.status`, and `wsbx.payment.init` are the final
     inspection before any
    separately authorized `wsbx.draft.submit`.
+12. WSBX uses a two-phase submission for daily `052`: `zt=8` is pending
+    approval submission, while `zt=9` means approval is in progress. The CLI's
+    `draft.submit` completes both phases.
 
 ## Stop Conditions
 

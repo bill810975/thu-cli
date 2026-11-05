@@ -803,6 +803,237 @@ fn employee_self_payment_row(
     }))
 }
 
+fn workflow_flag(value: Option<&Value>) -> Value {
+    match value {
+        Some(Value::Bool(true)) => json!("1"),
+        Some(Value::Bool(false)) | None | Some(Value::Null) => json!("0"),
+        Some(Value::Number(number)) if number.as_u64() == Some(1) => json!("1"),
+        Some(Value::String(value)) if value == "1" => json!("1"),
+        _ => json!("0"),
+    }
+}
+
+fn normalized_workflow(value: &Value, records: bool) -> Result<Vec<Value>> {
+    let rows = value
+        .as_array()
+        .ok_or_else(|| anyhow!("approval workflow must be a JSON array"))?;
+    let mut workflow = rows
+        .iter()
+        .map(|row| {
+            let object = row
+                .as_object()
+                .ok_or_else(|| anyhow!("approval workflow rows must be JSON objects"))?;
+            let mut normalized = if records {
+                json!({
+                    "rank": object.get("rank").cloned().unwrap_or(Value::Null),
+                    "roleId": object.get("roleId").cloned().unwrap_or(Value::Null),
+                    "roleNm": object.get("roleNm").cloned().unwrap_or(Value::Null),
+                    "ygbh": object.get("ygbh").cloned().unwrap_or(Value::Null),
+                    "ygmc": object.get("ygmc").cloned().unwrap_or(Value::Null),
+                    "BJLC": object.get("bjlc").cloned().unwrap_or(Value::Null),
+                    "TSDX": object.get("tsdx").cloned().unwrap_or(Value::Null),
+                    "SFQZ": object.get("sfqz").cloned().unwrap_or(Value::Null),
+                    "SFQM": object.get("sfqm").cloned().unwrap_or(Value::Null),
+                    "SPFS": object.get("spfs").cloned().unwrap_or(Value::Null)
+                })
+            } else {
+                Value::Object(object.clone())
+            };
+            normalized["TSDX"] = workflow_flag(normalized.get("TSDX"));
+            normalized["BJLC"] = workflow_flag(normalized.get("BJLC"));
+            Ok(normalized)
+        })
+        .collect::<Result<Vec<_>>>()?;
+    workflow.sort_by_key(|row| {
+        row.get("rank")
+            .and_then(|value| {
+                value
+                    .as_u64()
+                    .or_else(|| value.as_str().and_then(|text| text.parse().ok()))
+            })
+            .unwrap_or(u64::MAX)
+    });
+    Ok(workflow)
+}
+
+fn validate_workflow(workflow: &[Value]) -> Result<()> {
+    if workflow.is_empty() {
+        bail!("approval workflow is empty")
+    }
+    let mut levels = Vec::new();
+    for (index, row) in workflow.iter().enumerate() {
+        let rank = row["rank"]
+            .as_u64()
+            .or_else(|| row["rank"].as_str().and_then(|text| text.parse().ok()))
+            .ok_or_else(|| anyhow!("approval workflow row {} has no valid rank", index + 1))?;
+        if index == 0 && rank != 1 {
+            bail!("approval workflow must start at rank 1")
+        }
+        for key in ["ygbh", "ygmc", "roleNm"] {
+            if row[key].as_str().is_none_or(str::is_empty) {
+                bail!("approval workflow row {} is missing {key}", index + 1)
+            }
+        }
+        levels.push(rank);
+    }
+    let mut unique = levels.clone();
+    unique.sort_unstable();
+    unique.dedup();
+    for rank in unique {
+        if !workflow.iter().any(|row| {
+            let row_rank = row["rank"]
+                .as_u64()
+                .or_else(|| row["rank"].as_str().and_then(|text| text.parse().ok()));
+            row_rank == Some(rank) && row["TSDX"] == "1"
+        }) {
+            bail!("approval rank {rank} must include at least one approver receiving notifications")
+        }
+    }
+    Ok(())
+}
+
+async fn approval_workflow(
+    client: &mut WsbxClient<'_>,
+    ywbh: &str,
+    ywlx: &str,
+    is_cwzg: bool,
+) -> Result<Value> {
+    let records = client
+        .get("/workflow/record/get", json!({"ywbh": ywbh}), None)
+        .await?;
+    if records["data"]
+        .as_array()
+        .is_some_and(|rows| !rows.is_empty())
+    {
+        let workflow = normalized_workflow(&records["data"], true)?;
+        validate_workflow(&workflow)?;
+        return Ok(json!({"source": "record", "workflow": workflow}));
+    }
+
+    let status = client
+        .get("/common/get/ywbxr", json!({"ywbh": ywbh}), None)
+        .await?;
+    let base = &status["data"];
+    let workflow = client
+        .post_read(
+            "/approve/workflow/get",
+            json!({
+                "yydh": base["yydh"],
+                "bmbh": base["bmbh"],
+                "xmbh": base["xmbh"],
+                "ywlx": ywlx,
+                "isCwzg": is_cwzg,
+                "hyfIsCwzg": false
+            }),
+            None,
+        )
+        .await?;
+    let workflow = normalized_workflow(&workflow["data"], false)?;
+    validate_workflow(&workflow)?;
+    Ok(json!({"source": "generated", "workflow": workflow}))
+}
+
+async fn check_approval_workflow(
+    client: &mut WsbxClient<'_>,
+    ywbh: &str,
+    workflow: &[Value],
+    is_cwzg: bool,
+) -> Result<Value> {
+    validate_workflow(workflow)?;
+    let checked = client
+        .post_read(
+            "/approve/spxxdl/check",
+            json!({
+                "ywbh": ywbh,
+                "workflow": serde_json::to_string(workflow)?,
+                "isCwzg": is_cwzg
+            }),
+            None,
+        )
+        .await?;
+    let code = checked["data"]["code"]
+        .as_str()
+        .map(str::to_owned)
+        .or_else(|| {
+            checked["data"]["code"]
+                .as_i64()
+                .map(|value| value.to_string())
+        })
+        .unwrap_or_default();
+    if code != "0" {
+        let message = checked["data"]["msg"]
+            .as_str()
+            .or_else(|| checked["msg"].as_str())
+            .unwrap_or("approval workflow requires review");
+        bail!("approval workflow check failed with code {code}: {message}")
+    }
+    Ok(checked)
+}
+
+async fn submit_approval(
+    client: &mut WsbxClient<'_>,
+    ywbh: &str,
+    ywlx: &str,
+    args: &Value,
+) -> Result<Value> {
+    let status = client
+        .get("/common/get/ywbxr", json!({"ywbh": ywbh}), None)
+        .await?;
+    if status["data"]["zt"].as_str() != Some("8") {
+        bail!("approval submission requires receipt state 8")
+    }
+    let is_cwzg = bool_arg(args, "is_cwzg", true);
+    let workflow = if let Some(workflow) = args.get("workflow") {
+        let workflow = normalized_workflow(workflow, false)?;
+        validate_workflow(&workflow)?;
+        json!({"source": "provided", "workflow": workflow})
+    } else {
+        approval_workflow(client, ywbh, ywlx, is_cwzg).await?
+    };
+    let rows = workflow["workflow"]
+        .as_array()
+        .ok_or_else(|| anyhow!("approval workflow is invalid"))?;
+    check_approval_workflow(client, ywbh, rows, is_cwzg).await?;
+
+    let paperless = client
+        .post_read(
+            "/common/wzh/check",
+            json!({"ywbh": ywbh, "ywlx": ywlx}),
+            None,
+        )
+        .await?;
+    let paperless_available = paperless["data"]["paperless"].as_bool() == Some(true)
+        || paperless["data"]["paperless"].as_str() == Some("1");
+    let wzh_flag = args
+        .get("wzh_flag")
+        .map(|value| workflow_flag(Some(value)) == "1")
+        .unwrap_or(paperless_available);
+    let result = client
+        .post(
+            "/approve/spxxdl/submit",
+            json!({
+                "ywbh": ywbh,
+                "ywbh2": args.get("ywbh2").and_then(Value::as_str).unwrap_or(""),
+                "workflow": serde_json::to_string(rows)?,
+                "lcid": args.get("lcid").and_then(Value::as_str).unwrap_or(""),
+                "lcmc": args.get("lcmc").and_then(Value::as_str).unwrap_or(""),
+                "isSaveGxhlc": false,
+                "wzhFlag": wzh_flag,
+                "bzContent": args.get("note").and_then(Value::as_str).unwrap_or(""),
+                "jbrbh": user_id(client)?
+            }),
+            None,
+        )
+        .await?;
+    Ok(json!({
+        "business_number": ywbh,
+        "submitted": true,
+        "workflow_source": workflow["source"],
+        "wzh_flag": wzh_flag,
+        "result": result["data"]
+    }))
+}
+
 fn amount_cents(value: &Value) -> Result<u64> {
     let text = match value {
         Value::Null => return Ok(0),
@@ -2241,6 +2472,9 @@ pub fn operations() -> Vec<Value> {
         json!({"name":"wsbx.draft.status","mutating":false,"description":"Read the workflow state of a receipt","required":["ywbh"],"optional":[],"upstream":"common/get/ywbxr"}),
         json!({"name":"wsbx.payment.init","mutating":false,"description":"Read server-initialized repayment, card, private-payee, public-transfer, and project-transfer rows","required":["ywbh"],"optional":[],"upstream":"pay/init"}),
         json!({"name":"wsbx.payment.methods","mutating":false,"description":"List payment methods enabled for a reimbursement route","required":[],"optional":["ywlx"],"upstream":"pay/method/get"}),
+        json!({"name":"wsbx.approval.workflow","mutating":false,"description":"Read an existing approval workflow or generate WSBX's proposed workflow for a pending receipt","required":["ywbh"],"optional":["ywlx","is_cwzg"],"upstream":"workflow/record/get + approve/workflow/get"}),
+        json!({"name":"wsbx.approval.check","mutating":false,"description":"Check approver assignments and workflow rules before final approval submission","required":["ywbh"],"optional":["ywlx","workflow","is_cwzg"],"upstream":"approve/spxxdl/check"}),
+        json!({"name":"wsbx.approval.submit","mutating":true,"description":"Finalize receipt state 8 by submitting its checked approval workflow","required":["ywbh"],"optional":["ywlx","workflow","is_cwzg","wzh_flag","note","lcid","lcmc","ywbh2"],"upstream":"approve/spxxdl/submit"}),
         json!({"name":"wsbx.draft.create","mutating":true,"description":"Allocate a new reimbursement business number without submitting a receipt","required":[],"optional":["ywlx"],"upstream":"common/ywbh/get"}),
         json!({"name":"wsbx.draft.template","mutating":false,"description":"Read the route-specific expense template or international-travel initialization data","required":["ywbh","project"],"optional":["ywlx"],"upstream":"zdhb/template/get, common/templateInfo/get, common/tempInfo, or intl/travel/init"}),
         json!({"name":"wsbx.draft.bind-project","mutating":true,"description":"Bind a project to a draft and return its reimbursement-item template","required":["ywbh","project"],"optional":["ywlx","old_project","operator"],"upstream":"common/updateXmInfo"}),
@@ -2419,6 +2653,34 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                     None,
                 )
                 .await
+        }
+        "wsbx.approval.workflow" => {
+            let route = route_arg(a)?;
+            approval_workflow(
+                &mut client,
+                &required(a, "ywbh")?,
+                route.ywlx(),
+                bool_arg(a, "is_cwzg", true),
+            )
+            .await
+        }
+        "wsbx.approval.check" => {
+            let ywbh = required(a, "ywbh")?;
+            let route = route_arg(a)?;
+            let is_cwzg = bool_arg(a, "is_cwzg", true);
+            let workflow = if let Some(workflow) = a.get("workflow") {
+                normalized_workflow(workflow, false)?
+            } else {
+                approval_workflow(&mut client, &ywbh, route.ywlx(), is_cwzg).await?["workflow"]
+                    .as_array()
+                    .cloned()
+                    .ok_or_else(|| anyhow!("approval workflow is invalid"))?
+            };
+            check_approval_workflow(&mut client, &ywbh, &workflow, is_cwzg).await
+        }
+        "wsbx.approval.submit" => {
+            let route = route_arg(a)?;
+            submit_approval(&mut client, &required(a, "ywbh")?, route.ywlx(), a).await
         }
         "wsbx.draft.create" => {
             let route = route_arg(a)?;
@@ -2991,6 +3253,22 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
             let ywbh = required(a, "ywbh")?;
             let route = route_arg(a)?;
             let ywlx = route.ywlx();
+            if submit && route == ReimbursementRoute::Daily {
+                let status = client
+                    .get("/common/get/ywbxr", json!({"ywbh": ywbh}), None)
+                    .await?;
+                if status["data"]["zt"].as_str() == Some("8") {
+                    let approval = submit_approval(&mut client, &ywbh, ywlx, a).await?;
+                    return Ok(json!({
+                        "business_number": ywbh,
+                        "ywlx": ywlx,
+                        "route": route.name(),
+                        "staged": false,
+                        "submitted": true,
+                        "approval": approval
+                    }));
+                }
+            }
             let operator = a
                 .get("operator")
                 .and_then(Value::as_str)
@@ -3083,7 +3361,7 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                     }
                 })?;
             let warnings = result["data"]["warnMessage"].clone();
-            Ok(json!({
+            let mut response = json!({
                 "business_number": ywbh,
                 "ywlx": ywlx,
                 "route": route.name(),
@@ -3092,7 +3370,17 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                 "submitted": submit,
                 "warnings": warnings,
                 "result": result["data"]
-            }))
+            });
+            if submit && route == ReimbursementRoute::Daily {
+                response["approval"] = submit_approval(&mut client, &ywbh, ywlx, a)
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "receipt {ywbh} reached pending-approval state 8, but final approval submission failed; rerun draft.submit after inspecting the workflow"
+                        )
+                    })?;
+            }
+            Ok(response)
         }
         "wsbx.draft.delete" => {
             let ywbh = required(a, "ywbh")?;
@@ -3475,6 +3763,47 @@ mod tests {
     }
 
     #[test]
+    fn approval_workflow_records_are_normalized_and_checked() {
+        let workflow = normalized_workflow(
+            &json!([
+                {
+                    "rank": "2",
+                    "roleId": "role-2",
+                    "roleNm": "Project approver",
+                    "ygbh": "9999000002",
+                    "ygmc": "Approver Two",
+                    "bjlc": "1",
+                    "tsdx": true,
+                    "sfqz": "2",
+                    "sfqm": "0",
+                    "spfs": "2"
+                },
+                {
+                    "rank": "1",
+                    "roleId": "role-1",
+                    "roleNm": "Department approver",
+                    "ygbh": "9999000001",
+                    "ygmc": "Approver One",
+                    "bjlc": "0",
+                    "tsdx": "1",
+                    "sfqz": "2",
+                    "sfqm": "0",
+                    "spfs": "2"
+                }
+            ]),
+            true,
+        )
+        .unwrap();
+        assert_eq!(workflow[0]["rank"], "1");
+        assert_eq!(workflow[0]["TSDX"], "1");
+        validate_workflow(&workflow).unwrap();
+
+        let mut missing_notification = workflow;
+        missing_notification[0]["TSDX"] = json!("0");
+        assert!(validate_workflow(&missing_notification).is_err());
+    }
+
+    #[test]
     fn reimbursement_routes_match_the_frontend_contract() {
         assert_eq!(
             ReimbursementRoute::from_ywlx("052").unwrap(),
@@ -3734,6 +4063,24 @@ mod tests {
                 .unwrap()["required"],
             json!(["ywbh"])
         );
+    }
+
+    #[test]
+    fn final_approval_operations_are_in_the_guarded_catalogue() {
+        let operations = operations();
+        for name in ["wsbx.approval.workflow", "wsbx.approval.check"] {
+            let operation = operations
+                .iter()
+                .find(|operation| operation["name"] == name)
+                .unwrap_or_else(|| panic!("{name} must be discoverable"));
+            assert_eq!(operation["mutating"], false);
+        }
+        let submit = operations
+            .iter()
+            .find(|operation| operation["name"] == "wsbx.approval.submit")
+            .unwrap();
+        assert_eq!(submit["mutating"], true);
+        assert_eq!(submit["required"], json!(["ywbh"]));
     }
 
     #[test]
