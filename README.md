@@ -38,8 +38,11 @@ For an agent-driven installation, give an agent the prompt in
 - Hidden password input, SM2 encryption, MFA, and optional Keychain reuse.
 - Campus news search, courses, homework, schedules, calendar, library, sports,
   card, network, mail, invoices, THOS, GitLab, and other service operations.
-- Daily reimbursement (`052`) drafts: project binding, expense item templates,
-  electronic invoices, attachments, save, submit, delete, and withdrawal.
+- Reimbursement drafts for daily (`052`), smart/foreign-invoice (`051`),
+  domestic travel (`06`), conference (`19`), and international travel (`1206`),
+  including route-specific templates, invoices, attachments, payments,
+  international budgets, RMB/foreign-currency rows, save, submit, delete, and
+  withdrawal.
 - Learn courses, notifications, files, homework, questionnaires, and downloads.
 - JSON output, operation discovery, explicit mutation confirmation, and
   non-overwriting downloads.
@@ -51,8 +54,11 @@ every campus service remain subject to the boundaries in
 [docs/COVERAGE.md](docs/COVERAGE.md).
 
 The daily reimbursement client has also been checked against a live account
-through project binding and draft save. It has deliberately not submitted a real
-approval.
+through project binding and draft save. The added smart/foreign-invoice,
+domestic-travel, conference, and international-travel contracts are reconstructed
+from the current WSBX frontend and covered by offline fixtures; they still need
+live account and entitlement verification. The client has deliberately not
+submitted a real approval.
 
 ## Requirements
 
@@ -227,15 +233,18 @@ institutional policy.
 
 ## Codex skill
 
-The repository includes an installable Codex skill:
+The repository includes two installable Codex skills:
 
 ```sh
 mkdir -p "$HOME/.codex/skills"
 cp -R skills/thu-cli "$HOME/.codex/skills/"
+cp -R skills/thu-reimbursement "$HOME/.codex/skills/"
 ```
 
 The skill covers operation discovery, Info and Learn workflows, session
-refresh, mutation safety, and secret handling.
+refresh, mutation safety, and secret handling. The reimbursement skill routes
+domestic invoices and foreign `INVOICE`/`RECEIPT` cases through the correct
+evidence, approval, foreign-exchange, and CLI paths.
 
 For an agent-driven installation, give an agent the prompt in
 [prompts/install-thu-cli.md](prompts/install-thu-cli.md).
@@ -249,6 +258,7 @@ docs/                protocol, coverage, testing, and licensing notes
 licenses/            upstream and dependency notices
 examples/            example inputs
 skills/thu-cli/      reusable Codex skill
+skills/thu-reimbursement/  domestic and foreign reimbursement workflow
 prompts/             copy-paste agent prompts
 ```
 

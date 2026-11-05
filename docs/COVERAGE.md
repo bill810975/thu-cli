@@ -8,8 +8,10 @@ The exact generated operation catalog is `operations.json` and can always be rep
 
 - THU Info: academic records, teaching assessment, available classrooms, calendar and custom schedules, course registration/query/drop/PF/priority, library seats/rooms, sports booking/payment QR, campus card, dorm electricity, income/invoices, news, network devices, campus GitLab, THOS, campus mail, model token/chat, app feedback/announcements, server-side passkey/device management.
 - Online reimbursement: on-demand Info-to-wsbx SSO, project and item discovery,
-  electronic-invoice listing and binding, encrypted attachments, daily
-  reimbursement draft read/write, explicit submit, delete and withdrawal.
+  route-aware electronic-invoice binding, encrypted attachments, daily (`052`),
+  smart/foreign-invoice (`051`), domestic-travel (`06`), conference (`19`), and
+  international-travel (`1206`) draft read/write, international budget and
+  currency-row reads, explicit submit, delete, and withdrawal.
 - Learn: semesters, student/teacher views, courses, notifications, file categories/downloads/previews, homework details/submission, discussion/question/questionnaire reads, favorites/comments, course order, language, registrar calendar, CourseX metadata sharing.
 - App-only: three washer providers, SignalR schedule pairing/transfer, water account/order APIs and update manifest. RFC5545 ICS export is an additional CLI utility.
 
@@ -42,10 +44,14 @@ remains unverified even where its complete source protocol is ported.
 - MadModel chat uses non-streaming completion and does not execute model tool calls. Mobile voice, React Native screens/widgets, background notifications, local cache/favorites UI and platform attachment sharing are not server microservices and are not reproduced.
 - CourseX sharing requires the user's own refresh token. No embedded mobile credentials are copied into the CLI.
 - Payments return preparation/QR data; the CLI does not operate a payment wallet or complete payment approval. Water ordering is a separate legacy HTTP operation and can create an obligation.
-- The reimbursement client currently implements the daily-reimbursement
-  (`ywlx=052`) flow. Its read operations and a draft project bind/save were
-  verified live; a real approval submission was not performed. Invoice OCR,
-  mobile QR uploads and interactive approval routing remain outside this client.
+- The daily-reimbursement (`ywlx=052`) read operations and a draft project
+  bind/save were verified live. The `051`, `06`, `19`, and `1206` route contracts
+  are reconstructed from the current WSBX frontend and covered by offline
+  fixtures, but their account entitlements and live response variants still need
+  real-account verification. A real approval submission was not performed.
+  Invoice OCR, mobile QR uploads, International Office approvals,
+  foreign-exchange/Bank of China processing, remittance, and interactive
+  approval routing remain outside this client.
 - Local `logout` clears local cookies, not every server session. `learn logout --confirm` invokes Learn's remote logout.
 - A failed or timed-out write may already have reached the server. There is no automatic retry of a transaction.
 

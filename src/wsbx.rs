@@ -32,6 +32,88 @@ const PUBLIC_KEY: &str = r#"-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsteCb9QD4v7o7F3gHQSrR3s2EHtUgSp5b+KFOFrjtBGcWNgfLzz9Sv0zqLZno4oBJobvKQ6lvzS+drx7G2MxL/iNDh+7Cu2RZrY7ENILBKV20zKYRTeZLLImUgPZqtZBP1rUT+ig3SssdeNM628Hw65csM9ng4/q3UV80wNTHF+A4QpTJ2gppBv5fy9XiTrlJ2kTD9lNA75KNw4F6vZ7noWOMWUqyZRBm0BvYfajdfJo1uqerfLMhT/dAdEsUcFJTneSGRSt1yWYLDgIpV3EEZobaMt4UbpT/uWsS8XkukNTtEgzDLabF4zBiJTLJgIzBMT6Z5XlCuTiLTMnND3H7wIDAQAB
 -----END PUBLIC KEY-----"#;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ReimbursementRoute {
+    Daily,
+    Smart,
+    DomesticTravel,
+    Conference,
+    InternationalTravel,
+}
+
+impl ReimbursementRoute {
+    fn from_ywlx(ywlx: &str) -> Result<Self> {
+        match ywlx {
+            "052" => Ok(Self::Daily),
+            "051" => Ok(Self::Smart),
+            "06" => Ok(Self::DomesticTravel),
+            "19" => Ok(Self::Conference),
+            "1206" => Ok(Self::InternationalTravel),
+            _ => bail!(
+                "unsupported reimbursement ywlx {ywlx}; supported values are 051, 052, 06, 19, and 1206"
+            ),
+        }
+    }
+
+    fn ywlx(self) -> &'static str {
+        match self {
+            Self::Daily => "052",
+            Self::Smart => "051",
+            Self::DomesticTravel => "06",
+            Self::Conference => "19",
+            Self::InternationalTravel => "1206",
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Daily => "daily",
+            Self::Smart => "smart-or-foreign-invoice",
+            Self::DomesticTravel => "domestic-travel",
+            Self::Conference => "conference",
+            Self::InternationalTravel => "international-travel",
+        }
+    }
+
+    fn list_route(self) -> &'static str {
+        match self {
+            Self::Daily => "zdhb",
+            Self::Smart => "rcbx",
+            Self::DomesticTravel => "gnclfbx",
+            Self::Conference => "hyfbx",
+            Self::InternationalTravel => "gjclxhbx",
+        }
+    }
+
+    fn save_path(self) -> &'static str {
+        match self {
+            Self::Daily | Self::Smart | Self::Conference => "/pay/whole/submit",
+            Self::DomesticTravel => "/clf/gn/tmp/save",
+            Self::InternationalTravel => "/intl/travel/save",
+        }
+    }
+
+    fn template_path(self) -> Option<&'static str> {
+        match self {
+            Self::Daily => Some("/zdhb/template/get"),
+            Self::Smart | Self::Conference => Some("/common/templateInfo/get"),
+            Self::DomesticTravel => Some("/common/tempInfo"),
+            Self::InternationalTravel => None,
+        }
+    }
+}
+
+fn ywlx_arg(a: &Value) -> Result<&str> {
+    a.get("ywlx")
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .map_or(Ok(DEFAULT_YWLX), Ok)
+}
+
+fn route_arg(a: &Value) -> Result<ReimbursementRoute> {
+    ReimbursementRoute::from_ywlx(ywlx_arg(a)?)
+}
+
 #[derive(Deserialize, Serialize)]
 struct StoredAuth {
     token: String,
@@ -73,6 +155,14 @@ fn nonempty_string<'a>(value: &'a Value, key: &str) -> Result<&'a str> {
 
 fn bool_arg(a: &Value, key: &str, default: bool) -> bool {
     a.get(key).and_then(Value::as_bool).unwrap_or(default)
+}
+
+fn flag_string(a: &Value, key: &str) -> &'static str {
+    match a.get(key) {
+        Some(Value::Bool(true)) => "1",
+        Some(Value::String(value)) if value == "1" => "1",
+        _ => "0",
+    }
 }
 
 fn delivery_option(a: &Value, key: &str, submit: bool) -> Result<String> {
@@ -393,15 +483,8 @@ fn validate_template_items(template: &Value, items: &[Value]) -> Result<()> {
     Ok(())
 }
 
-fn save_payload(a: &Value, submit: bool) -> Result<Value> {
+fn daily_payload(a: &Value, submit: bool) -> Result<Value> {
     let ywbh = required(a, "ywbh")?;
-    let ywlx = a
-        .get("ywlx")
-        .and_then(Value::as_str)
-        .unwrap_or(DEFAULT_YWLX);
-    if ywlx != DEFAULT_YWLX {
-        bail!("wsbx.draft.save currently accepts only ywlx {DEFAULT_YWLX}")
-    }
     let project = a
         .get("project")
         .and_then(Value::as_object)
@@ -417,7 +500,7 @@ fn save_payload(a: &Value, submit: bool) -> Result<Value> {
         .ok_or_else(|| anyhow!("items must be a JSON array"))?;
     let items = selected_items(items, submit)?;
     let payments = payments(a)?;
-    let is_online = bool_arg(a, "is_online", false);
+    let is_online = flag_string(a, "is_online") == "1";
     let no_paper = delivery_option(a, "no_paper", submit)?;
     let state = if !submit {
         "0"
@@ -446,6 +529,672 @@ fn save_payload(a: &Value, submit: bool) -> Result<Value> {
         "bxsxType": "zdhb",
         "project": {"bmbh": bmbh, "xmbh": xmbh}
     }))
+}
+
+fn object_or_empty(a: &Value, key: &str) -> Result<Map<String, Value>> {
+    match a.get(key) {
+        None | Some(Value::Null) => Ok(Map::new()),
+        Some(Value::Object(object)) => Ok(object.clone()),
+        Some(_) => bail!("{key} must be a JSON object"),
+    }
+}
+
+fn array_or_empty(value: &Value, key: &str) -> Result<Vec<Value>> {
+    match value.get(key) {
+        None | Some(Value::Null) => Ok(Vec::new()),
+        Some(Value::Array(values)) => Ok(values.clone()),
+        Some(_) => bail!("{key} must be a JSON array"),
+    }
+}
+
+fn value_or_empty(value: &Value, key: &str) -> Value {
+    value.get(key).cloned().unwrap_or_else(|| json!(""))
+}
+
+fn first_value(a: &Value, details: &Value, key: &str) -> Value {
+    details
+        .get(key)
+        .or_else(|| a.get(key))
+        .cloned()
+        .unwrap_or_else(|| json!(""))
+}
+
+fn array_value(a: &Value, details: &Value, key: &str) -> Result<Vec<Value>> {
+    let value = details.get(key).or_else(|| a.get(key));
+    match value {
+        None | Some(Value::Null) => Ok(Vec::new()),
+        Some(Value::Array(values)) => Ok(values.clone()),
+        Some(_) => bail!("{key} must be a JSON array"),
+    }
+}
+
+fn insert_project(base: &mut Map<String, Value>, project: Option<&Value>) {
+    let Some(project) = project else {
+        return;
+    };
+    if let Some(bmbh) = project.get("bmbh") {
+        base.entry("bmbh".to_owned())
+            .or_insert_with(|| bmbh.clone());
+    }
+    if let Some(xmbh) = project.get("xmbh") {
+        base.entry("xmbh".to_owned())
+            .or_insert_with(|| xmbh.clone());
+    }
+    if let Some(bmmc) = project.get("bmmc") {
+        base.entry("bmmc".to_owned())
+            .or_insert_with(|| bmmc.clone());
+    }
+    if let Some(xmmc) = project.get("xmmc") {
+        base.entry("xmmc".to_owned())
+            .or_insert_with(|| xmmc.clone());
+    }
+}
+
+fn insert_payment_lists(payload: &mut Map<String, Value>, a: &Value) -> Result<()> {
+    for (key, value) in payments(a)? {
+        payload.insert(key, value);
+    }
+    Ok(())
+}
+
+fn international_pay(a: &Value, submit: bool, operator: &str, ywbh: &str) -> Result<Value> {
+    let mut pay = a
+        .get("payload")
+        .and_then(|payload| payload.get("pay"))
+        .and_then(Value::as_object)
+        .cloned()
+        .map_or_else(|| object_or_empty(a, "pay"), Ok)?;
+    for (key, value) in payments(a)? {
+        pay.entry(key).or_insert(value);
+    }
+    let project = a.get("project").or_else(|| a.get("base_info")).or_else(|| {
+        a.get("intl_budget")
+            .and_then(|budget| budget.get("data"))
+            .and_then(|budget| budget.get("base"))
+            .or_else(|| {
+                a.get("intl")
+                    .and_then(|budget| budget.get("data"))
+                    .and_then(|budget| budget.get("base"))
+            })
+    });
+    if let Some(project) = project {
+        insert_project(&mut pay, Some(project));
+    }
+    pay.entry("ywbh".to_owned()).or_insert_with(|| json!(ywbh));
+    pay.entry("ywlx".to_owned())
+        .or_insert_with(|| json!(ReimbursementRoute::InternationalTravel.ywlx()));
+    pay.entry("loginUserId".to_owned())
+        .or_insert_with(|| json!(operator));
+    pay.entry("loginUserName".to_owned())
+        .or_insert_with(|| json!(a.get("operator_name").and_then(Value::as_str).unwrap_or("")));
+    pay.entry("isOnline".to_owned())
+        .or_insert_with(|| json!(flag_string(a, "is_online")));
+    pay.insert("saveType".to_owned(), json!(if submit { "1" } else { "0" }));
+    pay.entry("cwcs".to_owned()).or_insert_with(|| json!("0"));
+    pay.entry("warnList".to_owned())
+        .or_insert_with(|| json!([]));
+    pay.entry("hasPaidAmount".to_owned())
+        .or_insert_with(|| json!("0"));
+    Ok(Value::Object(pay))
+}
+
+fn smart_payload(a: &Value, submit: bool, operator: &str) -> Result<Value> {
+    let ywbh = required(a, "ywbh")?;
+    let items = a
+        .get("items")
+        .map(|value| {
+            value
+                .as_array()
+                .cloned()
+                .ok_or_else(|| anyhow!("items must be a JSON array"))
+        })
+        .transpose()?
+        .unwrap_or_default();
+    let invoices = a
+        .get("invoice_list")
+        .map(|value| {
+            value
+                .as_array()
+                .cloned()
+                .ok_or_else(|| anyhow!("invoice_list must be a JSON array"))
+        })
+        .transpose()?
+        .unwrap_or_default();
+    let paper_items = a
+        .get("paper_items")
+        .map(|value| {
+            value
+                .as_array()
+                .cloned()
+                .ok_or_else(|| anyhow!("paper_items must be a JSON array"))
+        })
+        .transpose()?
+        .unwrap_or_default();
+    let base_smart = object_or_empty(a, "base_info")?;
+    let bxsy = base_smart
+        .get("bxsy")
+        .and_then(Value::as_str)
+        .or_else(|| a.get("purpose").and_then(Value::as_str))
+        .unwrap_or("");
+    let bxqksm = base_smart
+        .get("bxqksm")
+        .and_then(Value::as_str)
+        .or_else(|| a.get("description").and_then(Value::as_str))
+        .unwrap_or("");
+    let mut payload = json!({
+        "ywbh": ywbh,
+        "saveType": if submit { "1" } else { "0" },
+        "invoiceList": invoices,
+        "bxmbInfoList": items,
+        "ybbxBaseInfo": {
+            "bxsy": bxsy,
+            "bxqksm": bxqksm
+        },
+        "lxdh": a.get("phone").and_then(Value::as_str).unwrap_or(""),
+        "isOnline": flag_string(a, "is_online"),
+        "noPaper": delivery_option(a, "no_paper", submit)?,
+        "czr": operator
+    })
+    .as_object()
+    .cloned()
+    .ok_or_else(|| anyhow!("smart reimbursement payload is invalid"))?;
+    if !paper_items.is_empty() {
+        payload.insert("bxmbInfoList".to_owned(), json!(paper_items));
+    }
+    insert_payment_lists(&mut payload, a)?;
+    Ok(Value::Object(payload))
+}
+
+fn domestic_travel_payload(a: &Value, submit: bool, operator: &str) -> Result<Value> {
+    let ywbh = required(a, "ywbh")?;
+    let details = a
+        .get("travel")
+        .or_else(|| a.get("details"))
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    if !details.is_object() {
+        bail!("travel must be a JSON object")
+    }
+    let project = a.get("project");
+    let mut ywbxr_base = a
+        .get("base_info")
+        .or_else(|| details.get("ywbxrBase"))
+        .map(|value| {
+            value
+                .as_object()
+                .cloned()
+                .ok_or_else(|| anyhow!("base_info must be a JSON object"))
+        })
+        .transpose()?
+        .unwrap_or_default();
+    insert_project(&mut ywbxr_base, project);
+    ywbxr_base
+        .entry("ygbh".to_owned())
+        .or_insert_with(|| json!(operator));
+    ywbxr_base
+        .entry("fzrbh".to_owned())
+        .or_insert_with(|| json!(operator));
+    if let Some(name) = a.get("operator_name").and_then(Value::as_str) {
+        ywbxr_base
+            .entry("ygmc".to_owned())
+            .or_insert_with(|| json!(name));
+    }
+    ywbxr_base
+        .entry("lxdh".to_owned())
+        .or_insert_with(|| json!(a.get("phone").and_then(Value::as_str).unwrap_or("")));
+
+    let mut base_info = details
+        .get("baseInfoObj")
+        .map(|value| {
+            value
+                .as_object()
+                .cloned()
+                .ok_or_else(|| anyhow!("baseInfoObj must be a JSON object"))
+        })
+        .transpose()?
+        .unwrap_or_default();
+    insert_project(&mut base_info, project);
+    base_info
+        .entry("bxsy".to_owned())
+        .or_insert_with(|| json!(a.get("purpose").and_then(Value::as_str).unwrap_or("")));
+    base_info
+        .entry("ccdd".to_owned())
+        .or_insert_with(|| json!(details.get("ccdd").cloned().unwrap_or_else(|| json!(""))));
+    let mut bxr_info = base_info
+        .get("bxrInfo")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    bxr_info
+        .entry("bxrbh".to_owned())
+        .or_insert_with(|| json!(operator));
+    if let Some(name) = a.get("operator_name").and_then(Value::as_str) {
+        bxr_info
+            .entry("bxrmc".to_owned())
+            .or_insert_with(|| json!(name));
+    }
+    bxr_info
+        .entry("lxdh".to_owned())
+        .or_insert_with(|| json!(a.get("phone").and_then(Value::as_str).unwrap_or("")));
+    base_info.insert("bxrInfo".to_owned(), Value::Object(bxr_info));
+
+    let invoices = array_value(a, &details, "invoiceList")?;
+    let paper_items = array_value(a, &details, "fpjInfoList")?;
+    let special = array_value(a, &details, "bzList")?;
+    let default_traveler_id = first_value(a, &details, "cczmrbh");
+    let default_traveler_id = if default_traveler_id.as_str().is_some_and(str::is_empty) {
+        json!(operator)
+    } else {
+        default_traveler_id
+    };
+    let default_traveler_name = first_value(a, &details, "cczmrmc");
+    let default_traveler_name = if default_traveler_name.as_str().is_some_and(str::is_empty) {
+        json!(a.get("operator_name").and_then(Value::as_str).unwrap_or(""))
+    } else {
+        default_traveler_name
+    };
+    let mut payload = json!({
+        "ywbh": ywbh,
+        "cllx": value_or_empty(&details, "cllx"),
+        "ccsy": first_value(a, &details, "ccsy"),
+        "ccrq": value_or_empty(&details, "ccrq"),
+        "ts": value_or_empty(&details, "ts"),
+        "ccdd": first_value(a, &details, "ccdd"),
+        "cczmrbh": default_traveler_id,
+        "cczmrmc": default_traveler_name,
+        "lrrdh": a.get("phone").and_then(Value::as_str).unwrap_or(""),
+        "saveType": if submit { "1" } else { "0" },
+        "loginUserId": operator,
+        "loginUserName": a.get("operator_name").and_then(Value::as_str).unwrap_or(""),
+        "ywlx": ReimbursementRoute::DomesticTravel.ywlx(),
+        "bzList": special,
+        "czr": operator,
+        "fpjInfoList": paper_items,
+        "invoiceList": invoices,
+        "ywbxrBase": ywbxr_base,
+        "baseInfoObj": base_info,
+        "isOnline": flag_string(a, "is_online"),
+        "noPaper": delivery_option(a, "no_paper", submit)?
+    })
+    .as_object()
+    .cloned()
+    .ok_or_else(|| anyhow!("domestic travel payload is invalid"))?;
+    insert_payment_lists(&mut payload, a)?;
+    Ok(Value::Object(payload))
+}
+
+fn conference_payload(a: &Value, submit: bool, operator: &str) -> Result<Value> {
+    let ywbh = required(a, "ywbh")?;
+    let details = a
+        .get("conference")
+        .or_else(|| a.get("details"))
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    if !details.is_object() {
+        bail!("conference must be a JSON object")
+    }
+    let mut base = a
+        .get("conference_base")
+        .or_else(|| details.get("hyfBaseInfo"))
+        .map(|value| {
+            value
+                .as_object()
+                .cloned()
+                .ok_or_else(|| anyhow!("conference_base must be a JSON object"))
+        })
+        .transpose()?
+        .unwrap_or_else(|| {
+            let details = details.as_object().cloned().unwrap_or_default();
+            details
+                .into_iter()
+                .filter(|(key, _)| {
+                    [
+                        "ywbh",
+                        "hymc",
+                        "hydd",
+                        "hylb",
+                        "jbdw",
+                        "hyxs",
+                        "hykssj",
+                        "hyjssj",
+                        "xschrs",
+                        "xxxnrs",
+                        "xxxwrs",
+                        "gzrs",
+                        "ysbh",
+                        "ysfl",
+                        "jnf",
+                        "bdlkts",
+                        "bhfs",
+                        "xxxnrsold",
+                        "xxxwrsold",
+                        "isxsys",
+                        "zrs",
+                        "hyts",
+                        "dbrs",
+                    ]
+                    .contains(&key.as_str())
+                })
+                .collect()
+        });
+    base.insert("ywbh".to_owned(), json!(ywbh));
+
+    let expenses = if let Some(values) = a.get("items").and_then(Value::as_array) {
+        values.clone()
+    } else {
+        array_value(a, &details, "hyfZcmxList")?
+    };
+    let invoices = array_value(a, &details, "invoiceList")?;
+    let paper_items = array_value(a, &details, "bxmbInfoList")?;
+    let zt = if !submit {
+        "0"
+    } else if flag_string(a, "is_online") == "1" {
+        "8"
+    } else {
+        "5"
+    };
+    let mut payload = json!({
+        "ywbh": ywbh,
+        "saveType": if submit { "1" } else { "0" },
+        "invoiceList": invoices,
+        "bxmbInfoList": paper_items,
+        "lxdh": a.get("phone").and_then(Value::as_str).unwrap_or(""),
+        "zt": zt,
+        "isOnline": flag_string(a, "is_online"),
+        "noPaper": delivery_option(a, "no_paper", submit)?,
+        "czr": operator,
+        "hyfZcmxList": expenses,
+        "hyfBaseInfo": base
+    })
+    .as_object()
+    .cloned()
+    .ok_or_else(|| anyhow!("conference payload is invalid"))?;
+    insert_payment_lists(&mut payload, a)?;
+    Ok(Value::Object(payload))
+}
+
+fn international_travel_payload(a: &Value, submit: bool, operator: &str) -> Result<Value> {
+    let ywbh = required(a, "ywbh")?;
+    let envelope = a
+        .get("intl_budget")
+        .or_else(|| a.get("intl"))
+        .or_else(|| a.get("details"))
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    if !envelope.is_object() {
+        bail!("intl must be a JSON object")
+    }
+    let details = envelope.get("data").unwrap_or(&envelope);
+    if !details.is_object() {
+        bail!("intl.data must be a JSON object")
+    }
+    let project = a.get("project");
+    let mut base = details
+        .get("base")
+        .or_else(|| a.get("base_info"))
+        .map(|value| {
+            value
+                .as_object()
+                .cloned()
+                .ok_or_else(|| anyhow!("intl base must be a JSON object"))
+        })
+        .transpose()?
+        .unwrap_or_default();
+    insert_project(&mut base, project);
+    base.insert("ywbh".to_owned(), json!(ywbh));
+    base.insert(
+        "ywlx".to_owned(),
+        json!(ReimbursementRoute::InternationalTravel.ywlx()),
+    );
+    if let Some(line) = a.get("actual_line") {
+        base.insert("actualLine".to_owned(), line.clone());
+    }
+    if let Some(start) = a.get("actual_start_date") {
+        base.insert("actualStartDate".to_owned(), start.clone());
+    }
+    if let Some(end) = a.get("actual_end_date") {
+        base.insert("actualEndDate".to_owned(), end.clone());
+    }
+
+    let travelers = if let Some(values) = a.get("travelers").and_then(Value::as_array) {
+        values.clone()
+    } else {
+        array_or_empty(details, "ry")?
+    };
+    let expenses = if let Some(values) = a.get("expense_rows").and_then(Value::as_array) {
+        values.clone()
+    } else {
+        array_or_empty(details, "wb")?
+    };
+    let details_rows = array_or_empty(details, "wbDetail")?;
+    let allocations = array_or_empty(details, "ftfy")?;
+    let statements = array_or_empty(details, "statement")?;
+    let pay = international_pay(a, submit, operator, &ywbh)?;
+    Ok(json!({
+        "saveType": if submit { "1" } else { "0" },
+        "isOnline": flag_string(a, "is_online"),
+        "noPaper": delivery_option(a, "no_paper", submit)?,
+        "convertInaccuracy": a.get("convert_inaccuracy").cloned().unwrap_or_else(|| json!("0")),
+        "base": base,
+        "ry": travelers,
+        "wb": expenses,
+        "wbDetail": details_rows,
+        "ftfy": allocations,
+        "pay": pay,
+        "currencyRate": details.get("currencyRate").cloned().unwrap_or_else(|| json!({})),
+        "reexchange": details.get("reexchange").cloned().unwrap_or_else(|| json!({})),
+        "conversion": details.get("conversion").cloned().unwrap_or_else(|| json!({})),
+        "statement": statements
+    }))
+}
+
+fn route_payload(
+    a: &Value,
+    route: ReimbursementRoute,
+    submit: bool,
+    operator: &str,
+) -> Result<Value> {
+    match route {
+        ReimbursementRoute::Daily => daily_payload(a, submit),
+        ReimbursementRoute::Smart => smart_payload(a, submit, operator),
+        ReimbursementRoute::DomesticTravel => domestic_travel_payload(a, submit, operator),
+        ReimbursementRoute::Conference => conference_payload(a, submit, operator),
+        ReimbursementRoute::InternationalTravel => {
+            international_travel_payload(a, submit, operator)
+        }
+    }
+}
+
+fn route_payload_from_external(
+    a: &Value,
+    route: ReimbursementRoute,
+    submit: bool,
+    operator: &str,
+) -> Result<Value> {
+    let mut payload = a
+        .get("payload")
+        .and_then(Value::as_object)
+        .cloned()
+        .ok_or_else(|| anyhow!("payload must be a JSON object"))?;
+    let ywbh = required(a, "ywbh")?;
+    if payload.get("ywbh").and_then(Value::as_str) != Some(ywbh.as_str()) {
+        bail!("payload.ywbh must exactly match the ywbh argument")
+    }
+    payload.insert("saveType".to_owned(), json!(if submit { "1" } else { "0" }));
+    let no_paper = delivery_option(a, "no_paper", submit)?;
+    let online = flag_string(a, "is_online");
+    match route {
+        ReimbursementRoute::Daily => {
+            payload
+                .entry("bxsxType".to_owned())
+                .or_insert_with(|| json!("zdhb"));
+            insert_payment_lists(&mut payload, a)?;
+        }
+        ReimbursementRoute::Smart => {
+            payload
+                .entry("isOnline".to_owned())
+                .or_insert_with(|| json!(online));
+            payload
+                .entry("noPaper".to_owned())
+                .or_insert_with(|| json!(no_paper));
+            payload
+                .entry("czr".to_owned())
+                .or_insert_with(|| json!(operator));
+            insert_payment_lists(&mut payload, a)?;
+        }
+        ReimbursementRoute::DomesticTravel => {
+            payload
+                .entry("ywlx".to_owned())
+                .or_insert_with(|| json!(route.ywlx()));
+            payload
+                .entry("loginUserId".to_owned())
+                .or_insert_with(|| json!(operator));
+            payload
+                .entry("czr".to_owned())
+                .or_insert_with(|| json!(operator));
+            insert_payment_lists(&mut payload, a)?;
+        }
+        ReimbursementRoute::Conference => {
+            payload.entry("zt".to_owned()).or_insert_with(|| {
+                json!(if !submit {
+                    "0"
+                } else if online == "1" {
+                    "8"
+                } else {
+                    "5"
+                })
+            });
+            payload
+                .entry("isOnline".to_owned())
+                .or_insert_with(|| json!(online));
+            payload
+                .entry("noPaper".to_owned())
+                .or_insert_with(|| json!(no_paper));
+            payload
+                .entry("czr".to_owned())
+                .or_insert_with(|| json!(operator));
+            if let Some(hyf) = payload
+                .get_mut("hyfBaseInfo")
+                .and_then(Value::as_object_mut)
+            {
+                hyf.insert("ywbh".to_owned(), json!(ywbh));
+            }
+            insert_payment_lists(&mut payload, a)?;
+        }
+        ReimbursementRoute::InternationalTravel => {
+            let pay = international_pay(a, submit, operator, &ywbh)?;
+            payload
+                .entry("isOnline".to_owned())
+                .or_insert_with(|| json!(online));
+            payload
+                .entry("noPaper".to_owned())
+                .or_insert_with(|| json!(no_paper));
+            if let Some(base) = payload.get_mut("base").and_then(Value::as_object_mut) {
+                base.insert("ywbh".to_owned(), json!(ywbh));
+                base.insert("ywlx".to_owned(), json!(route.ywlx()));
+                insert_project(base, a.get("project"));
+            }
+            payload.insert("pay".to_owned(), pay);
+        }
+    }
+    Ok(Value::Object(payload))
+}
+
+fn validate_route_payload(route: ReimbursementRoute, payload: &Value, submit: bool) -> Result<()> {
+    if !payload.is_object() {
+        bail!("reimbursement payload must be a JSON object")
+    }
+    match route {
+        ReimbursementRoute::Daily => {
+            if !payload["bxsxList"].is_array() {
+                bail!("daily payload must contain a bxsxList array")
+            }
+            if !payload["ybbxBaseInfo"].is_object() {
+                bail!("daily payload must contain a ybbxBaseInfo object")
+            }
+        }
+        ReimbursementRoute::Smart => {
+            let invoices = payload["invoiceList"]
+                .as_array()
+                .ok_or_else(|| anyhow!("smart payload must contain an invoiceList array"))?;
+            let items = payload["bxmbInfoList"]
+                .as_array()
+                .ok_or_else(|| anyhow!("smart payload must contain a bxmbInfoList array"))?;
+            if submit && invoices.is_empty() && items.is_empty() {
+                bail!("smart reimbursement submission requires an invoice or paper expense item")
+            }
+        }
+        ReimbursementRoute::DomesticTravel => {
+            payload["ywbxrBase"]
+                .as_object()
+                .ok_or_else(|| anyhow!("domestic travel payload requires ywbxrBase"))?;
+            payload["baseInfoObj"]
+                .as_object()
+                .ok_or_else(|| anyhow!("domestic travel payload requires baseInfoObj"))?;
+            if submit {
+                for key in ["cllx", "ccsy", "ccdd", "ccrq"] {
+                    if payload.get(key).is_none_or(Value::is_null) {
+                        bail!("domestic travel submission requires {key}")
+                    }
+                }
+            }
+        }
+        ReimbursementRoute::Conference => {
+            payload["hyfBaseInfo"]
+                .as_object()
+                .ok_or_else(|| anyhow!("conference payload requires hyfBaseInfo"))?;
+            let expenses = payload["hyfZcmxList"]
+                .as_array()
+                .ok_or_else(|| anyhow!("conference payload requires hyfZcmxList"))?;
+            if submit && expenses.is_empty() {
+                bail!("conference submission requires at least one hyfZcmxList row")
+            }
+        }
+        ReimbursementRoute::InternationalTravel => {
+            let base = payload["base"]
+                .as_object()
+                .ok_or_else(|| anyhow!("international travel payload requires base"))?;
+            let travelers = payload["ry"]
+                .as_array()
+                .ok_or_else(|| anyhow!("international travel payload requires ry"))?;
+            let expenses = payload["wb"]
+                .as_array()
+                .ok_or_else(|| anyhow!("international travel payload requires wb"))?;
+            if submit {
+                if travelers.is_empty() {
+                    bail!("international travel submission requires at least one traveler")
+                }
+                if expenses.is_empty() {
+                    bail!("international travel submission requires at least one expense row")
+                }
+                for key in ["actualLine", "actualStartDate", "actualEndDate"] {
+                    if base
+                        .get(key)
+                        .and_then(Value::as_str)
+                        .is_none_or(str::is_empty)
+                    {
+                        bail!("international travel submission requires base.{key}")
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn save_payload(
+    a: &Value,
+    route: ReimbursementRoute,
+    submit: bool,
+    operator: &str,
+) -> Result<Value> {
+    let payload = if a.get("payload").is_some() {
+        route_payload_from_external(a, route, submit, operator)?
+    } else {
+        route_payload(a, route, submit, operator)?
+    };
+    validate_route_payload(route, &payload, submit)?;
+    Ok(payload)
 }
 
 impl<'a> WsbxClient<'a> {
@@ -784,19 +1533,102 @@ async fn project_template(
     ywlx: &str,
     project: &Value,
 ) -> Result<Value> {
+    let route = ReimbursementRoute::from_ywlx(ywlx)?;
     let (bmbh, xmbh) = project_parts(project)?;
-    client
-        .post_read(
-            "/zdhb/template/get",
-            json!({
-                "bmbh": bmbh,
-                "xmbh": xmbh,
-                "ywlx": ywlx,
-                "ywbh": ywbh
-            }),
-            None,
-        )
-        .await
+    match route {
+        ReimbursementRoute::Daily => {
+            client
+                .post_read(
+                    "/zdhb/template/get",
+                    json!({
+                        "bmbh": bmbh,
+                        "xmbh": xmbh,
+                        "ywlx": ywlx,
+                        "ywbh": ywbh
+                    }),
+                    None,
+                )
+                .await
+        }
+        ReimbursementRoute::Smart | ReimbursementRoute::Conference => {
+            client
+                .post_read(
+                    "/common/templateInfo/get",
+                    json!({
+                        "bmbh": bmbh,
+                        "xmbh": xmbh,
+                        "ywlx": ywlx
+                    }),
+                    None,
+                )
+                .await
+        }
+        ReimbursementRoute::DomesticTravel => {
+            client
+                .post_read(
+                    "/common/tempInfo",
+                    json!({
+                        "bmbh": bmbh,
+                        "xmbh": xmbh,
+                        "ywbh": ywbh,
+                        "ywlx": ywlx
+                    }),
+                    None,
+                )
+                .await
+        }
+        ReimbursementRoute::InternationalTravel => {
+            client
+                .get("/intl/travel/init", json!({"ywbh": ywbh}), None)
+                .await
+        }
+    }
+}
+
+async fn bind_shared_invoices(
+    client: &mut WsbxClient<'_>,
+    ywbh: &str,
+    invoice_numbers: &[String],
+    contract: &str,
+) -> Result<Value> {
+    let mut pending = invoice_numbers.to_vec();
+    for _ in 0..4 {
+        let result = client
+            .post(
+                "/invoice/binding",
+                json!({
+                    "dzfphs": pending,
+                    "ywbh": ywbh,
+                    "czr": user_id(client)?,
+                    "czrmc": client.auth.as_ref().map(|auth| auth.user_name.as_str()).unwrap_or(""),
+                    "htbh": contract
+                }),
+                Some("invoice"),
+            )
+            .await?;
+        let rejected = result["data"]["delDzfphs"].as_array().map_or(0, Vec::len);
+        if rejected > 0 {
+            bail!(
+                "WSBX rejected {rejected} invoice(s) while binding; inspect the draft before retrying"
+            )
+        }
+        let next = result["data"]["dzfphs"].as_array();
+        let Some(next) = next else {
+            return Ok(result);
+        };
+        pending =
+            next.iter()
+                .map(|value| {
+                    value.as_str().map(str::to_owned).ok_or_else(|| {
+                        anyhow!("invoice binding returned a non-string invoice number")
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?;
+        if pending.is_empty() {
+            return Ok(result);
+        }
+    }
+    bail!("invoice binding did not converge after four explicit server-directed passes; inspect the draft before retrying")
 }
 
 fn user_id(client: &WsbxClient<'_>) -> Result<String> {
@@ -807,34 +1639,94 @@ fn user_id(client: &WsbxClient<'_>) -> Result<String> {
         .ok_or_else(auth_error)
 }
 
+fn route_catalog() -> Value {
+    Value::Array(
+        [
+            ReimbursementRoute::Daily,
+            ReimbursementRoute::Smart,
+            ReimbursementRoute::DomesticTravel,
+            ReimbursementRoute::Conference,
+            ReimbursementRoute::InternationalTravel,
+        ]
+        .into_iter()
+        .map(|route| {
+            json!({
+                "ywlx": route.ywlx(),
+                "name": route.name(),
+                "list_route": route.list_route(),
+                "save_path": route.save_path(),
+                "template_path": route.template_path(),
+                "payload_mode": if route == ReimbursementRoute::InternationalTravel {
+                    "raw_or_intl_budget"
+                } else {
+                    "structured_or_raw"
+                }
+            })
+        })
+        .collect(),
+    )
+}
+
 pub fn operations() -> Vec<Value> {
     vec![
+        json!({"name":"wsbx.routes","mutating":false,"description":"List supported reimbursement routes and their WSBX endpoints without network access","required":[],"optional":[],"upstream":"local route map derived from the current WSBX frontend"}),
         json!({"name":"wsbx.user","mutating":false,"description":"Verify reimbursement SSO and return the current user profile","required":[],"optional":[],"upstream":"wsbx login/sso + userInfo"}),
         json!({"name":"wsbx.business-types","mutating":false,"description":"List enabled reimbursement business types","required":[],"optional":[],"upstream":"myReceipts/getYwlxs/get"}),
         json!({"name":"wsbx.project.list","mutating":false,"description":"Search projects available to the current user","required":[],"optional":["ywlx","query","department","principal","page_size","include_zero_balance"],"upstream":"common/funds/list"}),
         json!({"name":"wsbx.draft.list","mutating":false,"description":"List reimbursement drafts or submitted receipts","required":[],"optional":["ywlx","status","page_size","route","delegated","filter_delegation"],"upstream":"todoEs/getTodoLi"}),
-        json!({"name":"wsbx.draft.get","mutating":false,"description":"Read a reimbursement draft by business number","required":["ywbh"],"optional":[],"upstream":"rmb/info/get"}),
+        json!({"name":"wsbx.draft.get","mutating":false,"description":"Read a reimbursement draft using the route-specific detail endpoint","required":["ywbh"],"optional":["ywlx"],"upstream":"rmb/info/get or intl/travel/init"}),
+        json!({"name":"wsbx.draft.preview","mutating":false,"description":"Build and validate a route-specific save/submit payload locally without authentication or network access","required":["ywbh"],"optional":["ywlx","project","phone","purpose","description","items","payments","no_paper","is_online","base_info","invoice_list","paper_items","travel","conference","conference_base","intl","intl_budget","travelers","expense_rows","actual_line","actual_start_date","actual_end_date","payload","operator","operator_name","submit"],"upstream":"local payload builder"}),
         json!({"name":"wsbx.draft.status","mutating":false,"description":"Read the workflow state of a receipt","required":["ywbh"],"optional":[],"upstream":"common/get/ywbxr"}),
         json!({"name":"wsbx.draft.create","mutating":true,"description":"Allocate a new reimbursement business number without submitting a receipt","required":[],"optional":["ywlx"],"upstream":"common/ywbh/get"}),
-        json!({"name":"wsbx.draft.template","mutating":false,"description":"Read available reimbursement expense items for a project","required":["ywbh","project"],"optional":["ywlx"],"upstream":"zdhb/template/get"}),
+        json!({"name":"wsbx.draft.template","mutating":false,"description":"Read the route-specific expense template or international-travel initialization data","required":["ywbh","project"],"optional":["ywlx"],"upstream":"zdhb/template/get, common/templateInfo/get, common/tempInfo, or intl/travel/init"}),
         json!({"name":"wsbx.draft.bind-project","mutating":true,"description":"Bind a project to a draft and return its reimbursement-item template","required":["ywbh","project"],"optional":["ywlx","old_project","operator"],"upstream":"common/updateXmInfo"}),
         json!({"name":"wsbx.invoice.list","mutating":false,"description":"List electronic invoices by pending or used reimbursement state","required":[],"optional":["ywbh","query","page_size","status"],"upstream":"invoice/list"}),
-        json!({"name":"wsbx.invoice.bind","mutating":true,"description":"Bind selected electronic invoices to a reimbursement item","required":["ywbh","item","invoice_numbers"],"optional":["ywlx"],"upstream":"zdhb/dzfp/bind"}),
-        json!({"name":"wsbx.invoice.unbind","mutating":true,"description":"Unbind one electronic invoice from a reimbursement item","required":["ywbh","invoice_number"],"optional":[],"upstream":"zdhb/dzfp/mx/delete"}),
-        json!({"name":"wsbx.invoice.set-amount","mutating":true,"description":"Set the reimbursed amount of an electronic invoice","required":["ywbh","invoice_number","amount"],"optional":[],"upstream":"zdhb/dzfp/sbje/update"}),
+        json!({"name":"wsbx.invoice.bind","mutating":true,"description":"Bind selected electronic invoices using the selected reimbursement route","required":["ywbh","item","invoice_numbers"],"optional":["ywlx","fpid","contract"],"upstream":"zdhb/dzfp/bind or invoice/binding"}),
+        json!({"name":"wsbx.invoice.unbind","mutating":true,"description":"Unbind one invoice and its linked route data using the selected reimbursement route","required":["ywbh","invoice_number"],"optional":["ywlx","employee","ticket_state","travel_type"],"upstream":"zdhb/dzfp/mx/delete, clf/gn/dzfpHk/delete, invoice/release/use, or conference cleanup endpoints"}),
+        json!({"name":"wsbx.invoice.set-amount","mutating":true,"description":"Set the reimbursed amount of an electronic invoice using the selected reimbursement route","required":["ywbh","invoice_number","amount"],"optional":["ywlx","item"],"upstream":"zdhb/dzfp/sbje/update or intl/travel/invoice/update"}),
         json!({"name":"wsbx.invoice.detail","mutating":false,"description":"Read electronic invoices attached to a reimbursement item","required":["ywbh","item"],"optional":[],"upstream":"zdhb/dzfp/mx/get"}),
         json!({"name":"wsbx.attachment.types","mutating":false,"description":"List required and optional attachment categories for a draft","required":["ywbh"],"optional":[],"upstream":"jh/fj/get"}),
         json!({"name":"wsbx.attachment.list","mutating":false,"description":"List attachments on a draft","required":["ywbh"],"optional":["ywlx"],"upstream":"file/get/list"}),
         json!({"name":"wsbx.attachment.upload","mutating":true,"description":"Upload one attachment to a draft","required":["ywbh","file","attachment_type"],"optional":["ywlx"],"upstream":"file/common/upload/file"}),
         json!({"name":"wsbx.attachment.delete","mutating":true,"description":"Delete one attachment from a draft","required":["attachment"],"optional":["fjly"],"upstream":"file/uploadfile/delete"}),
-        json!({"name":"wsbx.draft.save","mutating":true,"description":"Validate and save reimbursement fields, items and payments as a draft","required":["ywbh","project","phone","items"],"optional":["ywlx","purpose","description","payments","no_paper"],"upstream":"pay/whole/submit"}),
-        json!({"name":"wsbx.draft.submit","mutating":true,"description":"Submit a fully prepared daily reimbursement; inspect server state before retrying","required":["ywbh","project","phone","items"],"optional":["ywlx","purpose","description","payments","is_online","no_paper"],"upstream":"pay/whole/submit"}),
+        json!({"name":"wsbx.draft.save","mutating":true,"description":"Validate and save a daily, smart/foreign-invoice, domestic-travel, conference, or international-travel draft","required":["ywbh"],"optional":["ywlx","project","phone","purpose","description","items","payments","no_paper","is_online","base_info","invoice_list","paper_items","travel","conference","conference_base","intl","intl_budget","travelers","expense_rows","actual_line","actual_start_date","actual_end_date","payload","operator","operator_name"],"upstream":"pay/whole/submit, clf/gn/tmp/save, or intl/travel/save"}),
+        json!({"name":"wsbx.draft.submit","mutating":true,"description":"Submit a fully prepared route-specific reimbursement; inspect server state before retrying","required":["ywbh"],"optional":["ywlx","project","phone","purpose","description","items","payments","no_paper","is_online","base_info","invoice_list","paper_items","travel","conference","conference_base","intl","intl_budget","travelers","expense_rows","actual_line","actual_start_date","actual_end_date","payload","operator","operator_name"],"upstream":"pay/whole/submit, clf/gn/tmp/save, or intl/travel/save"}),
         json!({"name":"wsbx.draft.delete","mutating":true,"description":"Permanently delete a draft by business number","required":["ywbh"],"optional":[],"upstream":"todoEs/receipt/delete"}),
         json!({"name":"wsbx.draft.revoke","mutating":true,"description":"Request withdrawal of a submitted receipt by business number","required":["ywbh"],"optional":[],"upstream":"todoEs/receipt/revoke"}),
+        json!({"name":"wsbx.conference.budgets","mutating":false,"description":"Search approved conference budgets","required":[],"optional":["page_size","page_number","is_myself","budget_number","query","br"],"upstream":"hyf/ys/page"}),
+        json!({"name":"wsbx.conference.expenses","mutating":false,"description":"Read conference expense rows and associated traveler/travel data","required":["ywbh","project"],"optional":["budget_number"],"upstream":"hyf/gnzcmx/list"}),
+        json!({"name":"wsbx.currency.list","mutating":false,"description":"List enabled currencies used by international reimbursement","required":[],"optional":[],"upstream":"currency/list"}),
+        json!({"name":"wsbx.currency.rate","mutating":false,"description":"Read the current exchange rate for one currency","required":["currency"],"optional":[],"upstream":"currency/rate/get"}),
+        json!({"name":"wsbx.intl.budget","mutating":false,"description":"Query an approved international-travel budget by authorisation code or approval number and traveler","required":[],"optional":["author_code","approval_number","employee","name"],"upstream":"intl/travel/budget/list"}),
+        json!({"name":"wsbx.intl.get","mutating":false,"description":"Read an international-travel reimbursement draft including RMB/foreign-currency rows","required":["ywbh"],"optional":[],"upstream":"intl/travel/init"}),
+        json!({"name":"wsbx.intl.currency.split","mutating":false,"description":"Ask WSBX to split foreign-currency expenses across travelers","required":["travelers","expense_rows"],"optional":[],"upstream":"intl/travel/wb/split"}),
+        json!({"name":"wsbx.intl.invoices","mutating":false,"description":"Read invoices attached to an international-travel reimbursement","required":["ywbh"],"optional":[],"upstream":"intl/travel/invoice/list"}),
+        json!({"name":"wsbx.intl.invoice.update","mutating":true,"description":"Update reimbursement amount or expense category for an international invoice","required":["ywbh","invoice_number","amount"],"optional":["item"],"upstream":"intl/travel/invoice/update"}),
+        json!({"name":"wsbx.intl.files","mutating":false,"description":"List international-travel supporting files by their serial number","required":["serial_number"],"optional":[],"upstream":"intl/file/list"}),
     ]
 }
 
 pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Value> {
+    if operation == "wsbx.routes" {
+        return Ok(json!({
+            "routes": route_catalog(),
+            "note": "Foreign receipts already paid personally normally use 051; InternationalTravel 1206 starts from an approved international-travel budget and carries separate RMB/foreign-currency rows."
+        }));
+    }
+    if operation == "wsbx.draft.preview" {
+        let route = route_arg(a)?;
+        let submit = bool_arg(a, "submit", false);
+        let operator = a.get("operator").and_then(Value::as_str).unwrap_or("");
+        let payload = save_payload(a, route, submit, operator)?;
+        return Ok(json!({
+            "network_request_sent": false,
+            "ywlx": route.ywlx(),
+            "route": route.name(),
+            "save_path": route.save_path(),
+            "submit": submit,
+            "payload": payload
+        }));
+    }
     let mut client = WsbxClient::new(session)?;
     client.ensure_authenticated().await?;
     match operation {
@@ -859,10 +1751,7 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                 .await
         }
         "wsbx.project.list" => {
-            let ywlx = a
-                .get("ywlx")
-                .and_then(Value::as_str)
-                .unwrap_or(DEFAULT_YWLX);
+            let ywlx = route_arg(a)?.ywlx();
             let page_size = u64_arg(a, "page_size", 20)?;
             let mut data = json!({
                 "pageSize": page_size,
@@ -884,10 +1773,8 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
             client.post_read("common/funds/list", data, None).await
         }
         "wsbx.draft.list" => {
-            let ywlx = a
-                .get("ywlx")
-                .and_then(Value::as_str)
-                .unwrap_or(DEFAULT_YWLX);
+            let route = route_arg(a)?;
+            let ywlx = route.ywlx();
             client
                 .post_read(
                     "/todoEs/getTodoLi",
@@ -897,7 +1784,10 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                         "current": 1,
                         "ywlx": ywlx,
                         "zt": a.get("status").and_then(Value::as_str).unwrap_or("ALL-2"),
-                        "route": a.get("route").and_then(Value::as_str).unwrap_or("zdhb"),
+                        "route": a
+                            .get("route")
+                            .and_then(Value::as_str)
+                            .unwrap_or_else(|| route.list_route()),
                         "dcl": "1",
                         "sflz": a.get("filter_delegation").and_then(Value::as_str).unwrap_or("0"),
                         "delegated": a.get("delegated").and_then(Value::as_str).unwrap_or("")
@@ -907,9 +1797,16 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                 .await
         }
         "wsbx.draft.get" => {
-            client
-                .get("/rmb/info/get", json!({"ywbh": required(a, "ywbh")?}), None)
-                .await
+            let ywbh = required(a, "ywbh")?;
+            if route_arg(a)? == ReimbursementRoute::InternationalTravel {
+                client
+                    .get("/intl/travel/init", json!({"ywbh": ywbh}), None)
+                    .await
+            } else {
+                client
+                    .get("/rmb/info/get", json!({"ywbh": ywbh}), None)
+                    .await
+            }
         }
         "wsbx.draft.status" => {
             client
@@ -921,10 +1818,8 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                 .await
         }
         "wsbx.draft.create" => {
-            let ywlx = a
-                .get("ywlx")
-                .and_then(Value::as_str)
-                .unwrap_or(DEFAULT_YWLX);
+            let route = route_arg(a)?;
+            let ywlx = route.ywlx();
             let result = client
                 .get_mutation(
                     "/common/ywbh/get",
@@ -940,11 +1835,15 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
             Ok(json!({
                 "business_number": ywbh,
                 "ywlx": ywlx,
+                "route": route.name(),
                 "saved": false,
                 "next": [
                     "wsbx.draft.bind-project",
-                    "wsbx.invoice.list",
-                    "wsbx.invoice.bind",
+                    if route == ReimbursementRoute::InternationalTravel {
+                        "wsbx.intl.get"
+                    } else {
+                        "wsbx.draft.template"
+                    },
                     "wsbx.attachment.upload",
                     "wsbx.draft.save"
                 ]
@@ -952,10 +1851,7 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
         }
         "wsbx.draft.template" => {
             let ywbh = required(a, "ywbh")?;
-            let ywlx = a
-                .get("ywlx")
-                .and_then(Value::as_str)
-                .unwrap_or(DEFAULT_YWLX);
+            let ywlx = route_arg(a)?.ywlx();
             let project = a
                 .get("project")
                 .ok_or_else(|| anyhow!("project must be a JSON object"))?;
@@ -963,10 +1859,8 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
         }
         "wsbx.draft.bind-project" => {
             let ywbh = required(a, "ywbh")?;
-            let ywlx = a
-                .get("ywlx")
-                .and_then(Value::as_str)
-                .unwrap_or(DEFAULT_YWLX);
+            let route = route_arg(a)?;
+            let ywlx = route.ywlx();
             let project = a
                 .get("project")
                 .ok_or_else(|| anyhow!("project must be a JSON object"))?;
@@ -1007,6 +1901,8 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                 };
             Ok(json!({
                 "business_number": ywbh,
+                "ywlx": ywlx,
+                "route": route.name(),
                 "project_bound": true,
                 "binding": binding,
                 "template": template,
@@ -1032,10 +1928,8 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
         }
         "wsbx.invoice.bind" => {
             let ywbh = required(a, "ywbh")?;
-            let ywlx = a
-                .get("ywlx")
-                .and_then(Value::as_str)
-                .unwrap_or(DEFAULT_YWLX);
+            let route = route_arg(a)?;
+            let ywlx = route.ywlx();
             let item = a
                 .get("item")
                 .ok_or_else(|| anyhow!("item must be a JSON object"))?;
@@ -1051,33 +1945,157 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                 .iter()
                 .map(|number| required(&json!({"number": number}), "number"))
                 .collect::<Result<Vec<_>>>()?;
-            let result = client
-                .post(
-                    "/zdhb/dzfp/bind",
-                    json!({
-                        "dzfphs": invoice_numbers,
-                        "jjflkmbh": class_code,
-                        "jjflkmmc": class_name,
-                        "ywbh": ywbh,
-                        "ywlx": ywlx,
-                        "czr": user_id(&client)?,
-                        "czrmc": client.auth.as_ref().map(|auth| auth.user_name.as_str()).unwrap_or("")
-                    }),
-                    None,
-                )
-                .await?;
-            Ok(json!({"business_number": ywbh, "bound": true, "result": result["data"]}))
+            if route == ReimbursementRoute::Daily {
+                let result = client
+                    .post(
+                        "/zdhb/dzfp/bind",
+                        json!({
+                            "dzfphs": invoice_numbers,
+                            "jjflkmbh": class_code,
+                            "jjflkmmc": class_name,
+                            "ywbh": ywbh,
+                            "ywlx": ywlx,
+                            "czr": user_id(&client)?,
+                            "czrmc": client.auth.as_ref().map(|auth| auth.user_name.as_str()).unwrap_or("")
+                        }),
+                        None,
+                    )
+                    .await?;
+                return Ok(json!({
+                    "business_number": ywbh,
+                    "ywlx": ywlx,
+                    "bound": true,
+                    "item_assignment": "completed",
+                    "result": result["data"]
+                }));
+            }
+
+            let result = bind_shared_invoices(
+                &mut client,
+                &ywbh,
+                &invoice_numbers,
+                a.get("contract").and_then(Value::as_str).unwrap_or(""),
+            )
+            .await?;
+            if route == ReimbursementRoute::Conference {
+                for invoice_number in &invoice_numbers {
+                    client
+                        .post(
+                            "/hyf/jjflkmbh/update",
+                            json!({
+                                "ywbh": ywbh,
+                                "fpid": a.get("fpid").and_then(Value::as_str).unwrap_or(""),
+                                "dzfph": invoice_number,
+                                "jjflkmbh": class_code,
+                                "jjflkmmc": class_name,
+                                "checked": "1"
+                            }),
+                            None,
+                        )
+                        .await
+                        .with_context(|| {
+                            format!(
+                                "invoice {invoice_number} was bound, but conference item assignment failed; inspect the draft before retrying"
+                            )
+                        })?;
+                }
+            }
+            Ok(json!({
+                "business_number": ywbh,
+                "ywlx": ywlx,
+                "bound": true,
+                "item_assignment": if route == ReimbursementRoute::Conference {
+                    "completed"
+                } else {
+                    "use invoice.set-amount or route-specific item fields after binding"
+                },
+                "result": result["data"]
+            }))
         }
         "wsbx.invoice.unbind" => {
             let ywbh = required(a, "ywbh")?;
             let invoice_number = required(a, "invoice_number")?;
-            let result = client
-                .get_mutation(
-                    "/zdhb/dzfp/mx/delete",
-                    json!({"ywbh": ywbh, "dzfph": invoice_number}),
-                    None,
-                )
-                .await?;
+            let route = route_arg(a)?;
+            let result = match route {
+                ReimbursementRoute::Daily => {
+                    client
+                        .get_mutation(
+                            "/zdhb/dzfp/mx/delete",
+                            json!({"ywbh": ywbh, "dzfph": invoice_number}),
+                            None,
+                        )
+                        .await?
+                }
+                ReimbursementRoute::DomesticTravel => {
+                    client
+                        .get_mutation(
+                            "/clf/gn/dzfpHk/delete",
+                            json!({
+                                "ywbh": ywbh,
+                                "dzfph": invoice_number,
+                                "ygbh": a.get("employee").and_then(Value::as_str).unwrap_or(""),
+                                "pjzt": a.get("ticket_state").and_then(Value::as_str).unwrap_or(""),
+                                "ccxz": a
+                                    .get("travel_type")
+                                    .and_then(Value::as_str)
+                                    .unwrap_or("")
+                            }),
+                            None,
+                        )
+                        .await?
+                }
+                ReimbursementRoute::Smart
+                | ReimbursementRoute::Conference
+                | ReimbursementRoute::InternationalTravel => {
+                    let released = client
+                        .post(
+                            "/invoice/release/use",
+                            json!({
+                                "dzfph": invoice_number,
+                                "ywbh": ywbh,
+                                "czr": user_id(&client)?,
+                                "czrmc": client.auth.as_ref().map(|auth| auth.user_name.as_str()).unwrap_or("")
+                            }),
+                            Some("invoice"),
+                        )
+                        .await?;
+                    if route == ReimbursementRoute::Smart {
+                        client
+                            .get_mutation(
+                                "/rmb/ywbh/dzfph/delete",
+                                json!({"ywbh": ywbh, "dzfph": invoice_number}),
+                                None,
+                            )
+                            .await?;
+                    } else if route == ReimbursementRoute::Conference {
+                        client
+                            .get_mutation(
+                                "/hyf/delete/yw",
+                                json!({"ywbh": ywbh, "dzfph": invoice_number}),
+                                None,
+                            )
+                            .await
+                            .with_context(|| {
+                                format!(
+                                    "invoice {invoice_number} was released, but conference expense cleanup failed; inspect the draft before retrying"
+                                )
+                            })?;
+                        client
+                            .get_mutation(
+                                "/hyf/clxcry/delete",
+                                json!({"ywbh": ywbh, "dzfph": invoice_number}),
+                                None,
+                            )
+                            .await
+                            .with_context(|| {
+                                format!(
+                                    "invoice {invoice_number} was released, but conference traveler cleanup failed; inspect the draft before retrying"
+                                )
+                            })?;
+                    }
+                    released
+                }
+            };
             Ok(json!({"business_number": ywbh, "unbound": true, "result": result["data"]}))
         }
         "wsbx.invoice.set-amount" => {
@@ -1085,17 +2103,37 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
             let invoice_number = required(a, "invoice_number")?;
             let amount = required(a, "amount")?;
             let cents = amount_cents(&json!(amount))?;
-            let result = client
-                .get_mutation(
-                    "/zdhb/dzfp/sbje/update",
-                    json!({
-                        "ywbh": ywbh,
-                        "dzfph": invoice_number,
-                        "dzpjSbje": format_amount(cents)
-                    }),
-                    None,
-                )
-                .await?;
+            let formatted = format_amount(cents);
+            let result = if route_arg(a)? == ReimbursementRoute::InternationalTravel {
+                client
+                    .post(
+                        "/intl/travel/invoice/update",
+                        json!({
+                            "ywbh": ywbh,
+                            "dzfph": invoice_number,
+                            "je": formatted,
+                            "jjflkmmc": a
+                                .get("item")
+                                .and_then(|item| item.get("jjflkmmc"))
+                                .and_then(Value::as_str)
+                                .unwrap_or("")
+                        }),
+                        None,
+                    )
+                    .await?
+            } else {
+                client
+                    .get_mutation(
+                        "/zdhb/dzfp/sbje/update",
+                        json!({
+                            "ywbh": ywbh,
+                            "dzfph": invoice_number,
+                            "dzpjSbje": formatted
+                        }),
+                        None,
+                    )
+                    .await?
+            };
             Ok(json!({"business_number": ywbh, "amount_updated": true, "result": result["data"]}))
         }
         "wsbx.invoice.detail" => {
@@ -1199,39 +2237,73 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
         }
         "wsbx.draft.save" | "wsbx.draft.submit" => {
             let submit = operation == "wsbx.draft.submit";
-            let mut payload = save_payload(a, submit)?;
             let ywbh = required(a, "ywbh")?;
-            let ywlx = a
-                .get("ywlx")
+            let route = route_arg(a)?;
+            let ywlx = route.ywlx();
+            let operator = a
+                .get("operator")
                 .and_then(Value::as_str)
-                .unwrap_or(DEFAULT_YWLX);
-            let project = a
-                .get("project")
-                .ok_or_else(|| anyhow!("project must be a JSON object"))?;
+                .map(str::to_owned)
+                .unwrap_or(user_id(&client)?);
+            let mut effective_args = a.clone();
+            if effective_args
+                .get("operator_name")
+                .and_then(Value::as_str)
+                .is_none_or(str::is_empty)
+            {
+                effective_args["operator_name"] = json!(client
+                    .auth
+                    .as_ref()
+                    .map(|auth| auth.user_name.as_str())
+                    .unwrap_or(""));
+            }
+            let mut payload = save_payload(&effective_args, route, submit, &operator)?;
             if submit {
-                let existing = client
-                    .get("/common/get/ywbxr", json!({"ywbh": ywbh}), None)
-                    .await?;
-                let state = existing["data"]["zt"]
-                    .as_str()
-                    .ok_or_else(|| anyhow!("receipt status is unavailable; refusing to submit"))?;
-                if !matches!(state, "0" | "Y1" | "Y4") {
+                let existing = if route == ReimbursementRoute::InternationalTravel {
+                    client
+                        .get("/intl/travel/init", json!({"ywbh": ywbh}), None)
+                        .await?
+                } else {
+                    client
+                        .get("/common/get/ywbxr", json!({"ywbh": ywbh}), None)
+                        .await?
+                };
+                let state = if route == ReimbursementRoute::InternationalTravel {
+                    existing["data"]["base"]["state"].as_str()
+                } else {
+                    existing["data"]["zt"].as_str()
+                }
+                .ok_or_else(|| anyhow!("receipt status is unavailable; refusing to submit"))?;
+                let ready = if route == ReimbursementRoute::InternationalTravel {
+                    matches!(state, "1")
+                } else {
+                    matches!(state, "0" | "Y1" | "Y4")
+                };
+                if !ready {
                     bail!("receipt state {state} is not submit-ready; inspect it before retrying")
                 }
             }
-            let template = project_template(&mut client, &ywbh, ywlx, project).await?;
-            let selected = payload["bxsxList"]
-                .as_array()
-                .ok_or_else(|| anyhow!("Saved reimbursement items are invalid"))?;
-            validate_template_items(&template, selected)?;
+            if route == ReimbursementRoute::Daily {
+                let project = effective_args
+                    .get("project")
+                    .ok_or_else(|| anyhow!("project must be a JSON object"))?;
+                let template = project_template(&mut client, &ywbh, ywlx, project).await?;
+                let selected = payload["bxsxList"]
+                    .as_array()
+                    .ok_or_else(|| anyhow!("Saved reimbursement items are invalid"))?;
+                validate_template_items(&template, selected)?;
+            }
             payload
                 .as_object_mut()
                 .ok_or_else(|| anyhow!("Saved reimbursement payload is invalid"))?
                 .remove("project");
-            let result = client.post("/pay/whole/submit", payload, None).await?;
+            let result = client.post(route.save_path(), payload, None).await?;
             let warnings = result["data"]["warnMessage"].clone();
             Ok(json!({
                 "business_number": ywbh,
+                "ywlx": ywlx,
+                "route": route.name(),
+                "endpoint": route.save_path(),
                 "saved": !submit,
                 "submitted": submit,
                 "warnings": warnings,
@@ -1251,6 +2323,143 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                 .post("/todoEs/receipt/revoke", json!({"ywbh": ywbh}), None)
                 .await?;
             Ok(json!({"business_number": ywbh, "revoke_requested": true, "result": result["data"]}))
+        }
+        "wsbx.conference.budgets" => {
+            let page_number = u64_arg(a, "page_number", 0)?;
+            let mut data = json!({
+                "pageSize": u64_arg(a, "page_size", 20)?,
+                "pageNumber": page_number,
+                "current": page_number.saturating_add(1),
+                "isMyself": a.get("is_myself").and_then(Value::as_str).unwrap_or("1"),
+                "xm": client.auth.as_ref().map(|auth| auth.user_name.as_str()).unwrap_or("")
+            });
+            for (argument, field) in [
+                ("budget_number", "ysbhCondition"),
+                ("query", "searchCondition"),
+                ("br", "br"),
+            ] {
+                if let Some(value) = a.get(argument) {
+                    data[field] = value.clone();
+                }
+            }
+            client.post_read("/hyf/ys/page", data, None).await
+        }
+        "wsbx.conference.expenses" => {
+            let project = a
+                .get("project")
+                .ok_or_else(|| anyhow!("project must be a JSON object"))?;
+            let (bmbh, xmbh) = project_parts(project)?;
+            client
+                .post_read(
+                    "/hyf/gnzcmx/list",
+                    json!({
+                        "ywlx": "19",
+                        "bmbh": bmbh,
+                        "xmbh": xmbh,
+                        "ywbh": required(a, "ywbh")?,
+                        "ysbh": a.get("budget_number").and_then(Value::as_str).unwrap_or("")
+                    }),
+                    None,
+                )
+                .await
+        }
+        "wsbx.currency.list" => client.get("/currency/list", json!({}), None).await,
+        "wsbx.currency.rate" => {
+            client
+                .get(
+                    "/currency/rate/get",
+                    json!({"hbid": required(a, "currency")?}),
+                    None,
+                )
+                .await
+        }
+        "wsbx.intl.budget" => {
+            let author_code = a.get("author_code").and_then(Value::as_str).unwrap_or("");
+            let approval_number = a
+                .get("approval_number")
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            let employee = a.get("employee").and_then(Value::as_str).unwrap_or("");
+            if author_code.is_empty() && (approval_number.is_empty() || employee.is_empty()) {
+                bail!("provide author_code, or both approval_number and employee")
+            }
+            let mut data = json!({
+                "authorCode": author_code,
+                "rwpjh": approval_number,
+                "ygbh": employee
+            });
+            if let Some(name) = a.get("name") {
+                data["ygxm"] = name.clone();
+            }
+            client
+                .post_read("/intl/travel/budget/list", data, None)
+                .await
+        }
+        "wsbx.intl.get" => {
+            client
+                .get(
+                    "/intl/travel/init",
+                    json!({"ywbh": required(a, "ywbh")?}),
+                    None,
+                )
+                .await
+        }
+        "wsbx.intl.currency.split" => {
+            let travelers = a
+                .get("travelers")
+                .and_then(Value::as_array)
+                .ok_or_else(|| anyhow!("travelers must be a JSON array"))?;
+            let expenses = a
+                .get("expense_rows")
+                .and_then(Value::as_array)
+                .ok_or_else(|| anyhow!("expense_rows must be a JSON array"))?;
+            client
+                .post_read(
+                    "/intl/travel/wb/split",
+                    json!({"ry": travelers, "wb": expenses}),
+                    None,
+                )
+                .await
+        }
+        "wsbx.intl.invoices" => {
+            client
+                .post_read(
+                    "/intl/travel/invoice/list",
+                    json!({"ywbh": required(a, "ywbh")?}),
+                    None,
+                )
+                .await
+        }
+        "wsbx.intl.invoice.update" => {
+            let ywbh = required(a, "ywbh")?;
+            let invoice_number = required(a, "invoice_number")?;
+            let cents = amount_cents(&json!(required(a, "amount")?))?;
+            let result = client
+                .post(
+                    "/intl/travel/invoice/update",
+                    json!({
+                        "ywbh": ywbh,
+                        "dzfph": invoice_number,
+                        "je": format_amount(cents),
+                        "jjflkmmc": a
+                            .get("item")
+                            .and_then(|item| item.get("jjflkmmc"))
+                            .and_then(Value::as_str)
+                            .unwrap_or("")
+                    }),
+                    None,
+                )
+                .await?;
+            Ok(json!({"business_number": ywbh, "updated": true, "result": result["data"]}))
+        }
+        "wsbx.intl.files" => {
+            client
+                .get(
+                    "/intl/file/list",
+                    json!({"serialNumber": required(a, "serial_number")?}),
+                    None,
+                )
+                .await
         }
         _ => bail!("Unknown wsbx operation: {operation}"),
     }
@@ -1342,7 +2551,9 @@ mod tests {
                     "dzpjFjzs": "1"
                 }]
             }),
+            ReimbursementRoute::Daily,
             false,
+            "fixture-user",
         )
         .unwrap();
         assert_eq!(payload["saveType"], "0");
@@ -1350,6 +2561,193 @@ mod tests {
         assert_eq!(payload["noPaper"], "");
         assert_eq!(payload["bxsxType"], "zdhb");
         assert_eq!(payload["dszzList"], json!([]));
+    }
+
+    #[test]
+    fn reimbursement_routes_match_the_frontend_contract() {
+        assert_eq!(
+            ReimbursementRoute::from_ywlx("052").unwrap(),
+            ReimbursementRoute::Daily
+        );
+        assert_eq!(
+            ReimbursementRoute::from_ywlx("051").unwrap(),
+            ReimbursementRoute::Smart
+        );
+        assert_eq!(
+            ReimbursementRoute::from_ywlx("06").unwrap(),
+            ReimbursementRoute::DomesticTravel
+        );
+        assert_eq!(
+            ReimbursementRoute::from_ywlx("19").unwrap(),
+            ReimbursementRoute::Conference
+        );
+        assert_eq!(
+            ReimbursementRoute::from_ywlx("1206").unwrap(),
+            ReimbursementRoute::InternationalTravel
+        );
+        assert_eq!(
+            ReimbursementRoute::DomesticTravel.save_path(),
+            "/clf/gn/tmp/save"
+        );
+        assert_eq!(
+            ReimbursementRoute::InternationalTravel.save_path(),
+            "/intl/travel/save"
+        );
+        assert!(ReimbursementRoute::from_ywlx("999").is_err());
+    }
+
+    #[test]
+    fn smart_payload_matches_the_general_invoice_route() {
+        let payload = save_payload(
+            &json!({
+                "ywbh": "YB0000000000051",
+                "ywlx": "051",
+                "project": {"bmbh": "999", "xmbh": "FIXTURE"},
+                "phone": "10000000000",
+                "purpose": "境外票据",
+                "description": "个人卡支付",
+                "is_online": true,
+                "items": [{"jjflkmbh": "302", "jjflkmmc": "测试费", "jje": "10.00"}],
+                "invoice_list": [{"dzfph": "INV-1", "bxje": "10.00"}]
+            }),
+            ReimbursementRoute::Smart,
+            true,
+            "fixture-user",
+        )
+        .unwrap();
+        assert_eq!(payload["saveType"], "1");
+        assert_eq!(payload["isOnline"], "1");
+        assert_eq!(payload["czr"], "fixture-user");
+        assert_eq!(
+            payload["invoiceList"].as_array().unwrap().len(),
+            1,
+            "foreign invoices already paid personally stay in the 051 route"
+        );
+        assert!(payload.get("bxsxType").is_none());
+    }
+
+    #[test]
+    fn domestic_travel_payload_uses_its_own_save_contract() {
+        let payload = save_payload(
+            &json!({
+                "ywbh": "YB0000000000006",
+                "ywlx": "06",
+                "project": {"bmbh": "999", "xmbh": "FIXTURE"},
+                "phone": "10000000000",
+                "travel": {
+                    "cllx": "1",
+                    "ccsy": "学术交流",
+                    "ccrq": ["2026-10-01", "2026-10-03"],
+                    "ts": "3",
+                    "ccdd": "上海",
+                    "cczmrbh": "T0001",
+                    "cczmrmc": "测试用户",
+                    "invoiceList": [{"dzfph": "TRAIN-1", "bxje": "100.00"}],
+                    "fpjInfoList": []
+                },
+                "base_info": {"bmbh": "999", "xmbh": "FIXTURE"}
+            }),
+            ReimbursementRoute::DomesticTravel,
+            false,
+            "fixture-user",
+        )
+        .unwrap();
+        assert_eq!(payload["ywlx"], "06");
+        assert_eq!(payload["cllx"], "1");
+        assert_eq!(payload["invoiceList"].as_array().unwrap().len(), 1);
+        assert_eq!(payload["loginUserId"], "fixture-user");
+    }
+
+    #[test]
+    fn conference_payload_preserves_expense_and_base_blocks() {
+        let payload = save_payload(
+            &json!({
+                "ywbh": "YB0000000000019",
+                "ywlx": "19",
+                "project": {"bmbh": "999", "xmbh": "FIXTURE"},
+                "phone": "10000000000",
+                "conference": {
+                    "hyfBaseInfo": {
+                        "hymc": "测试会议",
+                        "hydd": "校内",
+                        "hylb": "1",
+                        "hykssj": "2026-10-01",
+                        "hyjssj": "2026-10-02"
+                    },
+                    "hyfZcmxList": [{"jjflkmbh": "302", "jjflkmmc": "会议费"}]
+                }
+            }),
+            ReimbursementRoute::Conference,
+            false,
+            "fixture-user",
+        )
+        .unwrap();
+        assert_eq!(payload["hyfBaseInfo"]["ywbh"], "YB0000000000019");
+        assert_eq!(payload["hyfZcmxList"].as_array().unwrap().len(), 1);
+        assert_eq!(payload["zt"], "0");
+    }
+
+    #[test]
+    fn international_payload_accepts_budget_result_and_currency_rows() {
+        let payload = save_payload(
+            &json!({
+                "ywbh": "YB000000001206",
+                "ywlx": "1206",
+                "project": {"bmbh": "999", "xmbh": "FIXTURE"},
+                "intl_budget": {
+                    "data": {
+                        "base": {"actualLine": "北京-东京", "actualStartDate": "2026-09-01", "actualEndDate": "2026-09-05"},
+                        "ry": [{"ygbh": "T0001", "xm": "测试用户"}],
+                        "wb": [{"item": "注册费", "detail": [{"actualCurrency": "USD", "actualMoney": "100"}]}],
+                        "currencyRate": {"USD": {"rate": "7.1"}}
+                    }
+                }
+            }),
+            ReimbursementRoute::InternationalTravel,
+            true,
+            "fixture-user",
+        )
+        .unwrap();
+        assert_eq!(payload["base"]["ywbh"], "YB000000001206");
+        assert_eq!(payload["base"]["ywlx"], "1206");
+        assert_eq!(payload["ry"].as_array().unwrap().len(), 1);
+        assert_eq!(payload["wb"].as_array().unwrap().len(), 1);
+        assert_eq!(payload["currencyRate"]["USD"]["rate"], "7.1");
+        assert_eq!(payload["pay"]["ywlx"], "1206");
+        assert_eq!(payload["pay"]["saveType"], "1");
+        assert_eq!(payload["pay"]["loginUserId"], "fixture-user");
+    }
+
+    #[test]
+    fn external_payload_cannot_change_the_business_number_or_save_type() {
+        let payload = save_payload(
+            &json!({
+                "ywbh": "YB-CORRECT",
+                "ywlx": "19",
+                "payload": {
+                    "ywbh": "YB-CORRECT",
+                    "saveType": "0",
+                    "hyfBaseInfo": {"ywbh": "YB-CORRECT"},
+                    "hyfZcmxList": [{"jjflkmbh": "302"}]
+                }
+            }),
+            ReimbursementRoute::Conference,
+            true,
+            "fixture-user",
+        )
+        .unwrap();
+        assert_eq!(payload["saveType"], "1");
+        assert!(save_payload(
+            &json!({
+                "ywbh": "YB-CORRECT",
+                "ywlx": "19",
+                "payload": {"ywbh": "YB-OTHER"}
+            }),
+            ReimbursementRoute::Conference,
+            false,
+            "fixture-user",
+        )
+        .is_err());
     }
 
     #[test]
@@ -1364,6 +2762,7 @@ mod tests {
             "wsbx.draft.submit",
             "wsbx.draft.delete",
             "wsbx.draft.revoke",
+            "wsbx.intl.invoice.update",
         ] {
             assert!(
                 operations

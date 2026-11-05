@@ -1977,6 +1977,14 @@
       "upstream": "thu-info-lib/src/lib/card.ts"
     },
     {
+      "description": "List supported reimbursement routes and their WSBX endpoints without network access",
+      "mutating": false,
+      "name": "wsbx.routes",
+      "optional": [],
+      "required": [],
+      "upstream": "local route map derived from the current WSBX frontend"
+    },
+    {
       "description": "Verify reimbursement SSO and return the current user profile",
       "mutating": false,
       "name": "wsbx.user",
@@ -2023,14 +2031,53 @@
       "upstream": "todoEs/getTodoLi"
     },
     {
-      "description": "Read a reimbursement draft by business number",
+      "description": "Read a reimbursement draft using the route-specific detail endpoint",
       "mutating": false,
       "name": "wsbx.draft.get",
-      "optional": [],
+      "optional": [
+        "ywlx"
+      ],
       "required": [
         "ywbh"
       ],
-      "upstream": "rmb/info/get"
+      "upstream": "rmb/info/get or intl/travel/init"
+    },
+    {
+      "description": "Build and validate a route-specific save/submit payload locally without authentication or network access",
+      "mutating": false,
+      "name": "wsbx.draft.preview",
+      "optional": [
+        "ywlx",
+        "project",
+        "phone",
+        "purpose",
+        "description",
+        "items",
+        "payments",
+        "no_paper",
+        "is_online",
+        "base_info",
+        "invoice_list",
+        "paper_items",
+        "travel",
+        "conference",
+        "conference_base",
+        "intl",
+        "intl_budget",
+        "travelers",
+        "expense_rows",
+        "actual_line",
+        "actual_start_date",
+        "actual_end_date",
+        "payload",
+        "operator",
+        "operator_name",
+        "submit"
+      ],
+      "required": [
+        "ywbh"
+      ],
+      "upstream": "local payload builder"
     },
     {
       "description": "Read the workflow state of a receipt",
@@ -2053,7 +2100,7 @@
       "upstream": "common/ywbh/get"
     },
     {
-      "description": "Read available reimbursement expense items for a project",
+      "description": "Read the route-specific expense template or international-travel initialization data",
       "mutating": false,
       "name": "wsbx.draft.template",
       "optional": [
@@ -2063,7 +2110,7 @@
         "ywbh",
         "project"
       ],
-      "upstream": "zdhb/template/get"
+      "upstream": "zdhb/template/get, common/templateInfo/get, common/tempInfo, or intl/travel/init"
     },
     {
       "description": "Bind a project to a draft and return its reimbursement-item template",
@@ -2094,41 +2141,51 @@
       "upstream": "invoice/list"
     },
     {
-      "description": "Bind selected electronic invoices to a reimbursement item",
+      "description": "Bind selected electronic invoices using the selected reimbursement route",
       "mutating": true,
       "name": "wsbx.invoice.bind",
       "optional": [
-        "ywlx"
+        "ywlx",
+        "fpid",
+        "contract"
       ],
       "required": [
         "ywbh",
         "item",
         "invoice_numbers"
       ],
-      "upstream": "zdhb/dzfp/bind"
+      "upstream": "zdhb/dzfp/bind or invoice/binding"
     },
     {
-      "description": "Unbind one electronic invoice from a reimbursement item",
+      "description": "Unbind one invoice and its linked route data using the selected reimbursement route",
       "mutating": true,
       "name": "wsbx.invoice.unbind",
-      "optional": [],
+      "optional": [
+        "ywlx",
+        "employee",
+        "ticket_state",
+        "travel_type"
+      ],
       "required": [
         "ywbh",
         "invoice_number"
       ],
-      "upstream": "zdhb/dzfp/mx/delete"
+      "upstream": "zdhb/dzfp/mx/delete, clf/gn/dzfpHk/delete, invoice/release/use, or conference cleanup endpoints"
     },
     {
-      "description": "Set the reimbursed amount of an electronic invoice",
+      "description": "Set the reimbursed amount of an electronic invoice using the selected reimbursement route",
       "mutating": true,
       "name": "wsbx.invoice.set-amount",
-      "optional": [],
+      "optional": [
+        "ywlx",
+        "item"
+      ],
       "required": [
         "ywbh",
         "invoice_number",
         "amount"
       ],
-      "upstream": "zdhb/dzfp/sbje/update"
+      "upstream": "zdhb/dzfp/sbje/update or intl/travel/invoice/update"
     },
     {
       "description": "Read electronic invoices attached to a reimbursement item",
@@ -2190,43 +2247,76 @@
       "upstream": "file/uploadfile/delete"
     },
     {
-      "description": "Validate and save reimbursement fields, items and payments as a draft",
+      "description": "Validate and save a daily, smart/foreign-invoice, domestic-travel, conference, or international-travel draft",
       "mutating": true,
       "name": "wsbx.draft.save",
       "optional": [
         "ywlx",
-        "purpose",
-        "description",
-        "payments",
-        "no_paper"
-      ],
-      "required": [
-        "ywbh",
         "project",
         "phone",
-        "items"
+        "purpose",
+        "description",
+        "items",
+        "payments",
+        "no_paper",
+        "is_online",
+        "base_info",
+        "invoice_list",
+        "paper_items",
+        "travel",
+        "conference",
+        "conference_base",
+        "intl",
+        "intl_budget",
+        "travelers",
+        "expense_rows",
+        "actual_line",
+        "actual_start_date",
+        "actual_end_date",
+        "payload",
+        "operator",
+        "operator_name"
       ],
-      "upstream": "pay/whole/submit"
+      "required": [
+        "ywbh"
+      ],
+      "upstream": "pay/whole/submit, clf/gn/tmp/save, or intl/travel/save"
     },
     {
-      "description": "Submit a fully prepared daily reimbursement; inspect server state before retrying",
+      "description": "Submit a fully prepared route-specific reimbursement; inspect server state before retrying",
       "mutating": true,
       "name": "wsbx.draft.submit",
       "optional": [
         "ywlx",
-        "purpose",
-        "description",
-        "payments",
-        "is_online",
-        "no_paper"
-      ],
-      "required": [
-        "ywbh",
         "project",
         "phone",
-        "items"
+        "purpose",
+        "description",
+        "items",
+        "payments",
+        "no_paper",
+        "is_online",
+        "base_info",
+        "invoice_list",
+        "paper_items",
+        "travel",
+        "conference",
+        "conference_base",
+        "intl",
+        "intl_budget",
+        "travelers",
+        "expense_rows",
+        "actual_line",
+        "actual_start_date",
+        "actual_end_date",
+        "payload",
+        "operator",
+        "operator_name"
       ],
-      "upstream": "pay/whole/submit"
+      "required": [
+        "ywbh"
+      ],
+      "upstream": "pay/whole/submit, clf/gn/tmp/save, or intl/travel/save"
     },
     {
       "description": "Permanently delete a draft by business number",
@@ -2247,6 +2337,120 @@
         "ywbh"
       ],
       "upstream": "todoEs/receipt/revoke"
+    },
+    {
+      "description": "Search approved conference budgets",
+      "mutating": false,
+      "name": "wsbx.conference.budgets",
+      "optional": [
+        "page_size",
+        "page_number",
+        "is_myself",
+        "budget_number",
+        "query",
+        "br"
+      ],
+      "required": [],
+      "upstream": "hyf/ys/page"
+    },
+    {
+      "description": "Read conference expense rows and associated traveler/travel data",
+      "mutating": false,
+      "name": "wsbx.conference.expenses",
+      "optional": [
+        "budget_number"
+      ],
+      "required": [
+        "ywbh",
+        "project"
+      ],
+      "upstream": "hyf/gnzcmx/list"
+    },
+    {
+      "description": "List enabled currencies used by international reimbursement",
+      "mutating": false,
+      "name": "wsbx.currency.list",
+      "optional": [],
+      "required": [],
+      "upstream": "currency/list"
+    },
+    {
+      "description": "Read the current exchange rate for one currency",
+      "mutating": false,
+      "name": "wsbx.currency.rate",
+      "optional": [],
+      "required": [
+        "currency"
+      ],
+      "upstream": "currency/rate/get"
+    },
+    {
+      "description": "Query an approved international-travel budget by authorisation code or approval number and traveler",
+      "mutating": false,
+      "name": "wsbx.intl.budget",
+      "optional": [
+        "author_code",
+        "approval_number",
+        "employee",
+        "name"
+      ],
+      "required": [],
+      "upstream": "intl/travel/budget/list"
+    },
+    {
+      "description": "Read an international-travel reimbursement draft including RMB/foreign-currency rows",
+      "mutating": false,
+      "name": "wsbx.intl.get",
+      "optional": [],
+      "required": [
+        "ywbh"
+      ],
+      "upstream": "intl/travel/init"
+    },
+    {
+      "description": "Ask WSBX to split foreign-currency expenses across travelers",
+      "mutating": false,
+      "name": "wsbx.intl.currency.split",
+      "optional": [],
+      "required": [
+        "travelers",
+        "expense_rows"
+      ],
+      "upstream": "intl/travel/wb/split"
+    },
+    {
+      "description": "Read invoices attached to an international-travel reimbursement",
+      "mutating": false,
+      "name": "wsbx.intl.invoices",
+      "optional": [],
+      "required": [
+        "ywbh"
+      ],
+      "upstream": "intl/travel/invoice/list"
+    },
+    {
+      "description": "Update reimbursement amount or expense category for an international invoice",
+      "mutating": true,
+      "name": "wsbx.intl.invoice.update",
+      "optional": [
+        "item"
+      ],
+      "required": [
+        "ywbh",
+        "invoice_number",
+        "amount"
+      ],
+      "upstream": "intl/travel/invoice/update"
+    },
+    {
+      "description": "List international-travel supporting files by their serial number",
+      "mutating": false,
+      "name": "wsbx.intl.files",
+      "optional": [],
+      "required": [
+        "serial_number"
+      ],
+      "upstream": "intl/file/list"
     }
   ]
 }

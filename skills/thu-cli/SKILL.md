@@ -161,6 +161,9 @@ The `wsbx.*` operations use the authenticated Info profile to acquire a wsbx SSO
 ticket on demand. They keep the rotating wsbx token in a private mode-600
 sidecar; never print or copy it. No background service is required.
 
+For receipt classification and the domestic-versus-foreign document workflow,
+use the repository's `thu-reimbursement` skill when it is installed.
+
 Start with reads:
 
 ```sh
@@ -174,10 +177,34 @@ thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
   thu wsbx.draft.list --args '{"status":"ALL-2"}'
 ```
 
-The daily reimbursement workflow is `ywlx=052`: allocate a draft number, bind a
-project, use its expense-item template, bind unused invoices and attachments,
-save, then submit separately. `draft.bind-project`, `invoice.bind`,
-`attachment.upload`, `draft.save`, and `draft.submit` all mutate server state.
+Use `thu wsbx.routes` to inspect the supported route map. Pass `ywlx` explicitly
+for new work:
+
+| `ywlx` | Workflow |
+| --- | --- |
+| `052` | Daily reimbursement |
+| `051` | Smart reimbursement; normally used for a foreign invoice/receipt already paid personally |
+| `06` | Domestic travel |
+| `19` | Conference |
+| `1206` | International travel with approved RMB/foreign-currency rows |
+
+The normal sequence is: allocate a draft number, bind a project, read the live
+route template, bind unused invoices, upload evidence, save, inspect, then
+submit separately. `draft.bind-project`, `invoice.bind`,
+`attachment.upload`, `draft.save`, and `draft.submit` mutate server state.
+`draft.template`, `draft.get`, and invoice unbinding dispatch by route rather
+than assuming `052`.
+
+Build and validate the complete route payload offline before a write:
+
+```sh
+thu-cli --compact thu wsbx.draft.preview \
+  --args-file PRIVATE_REIMBURSEMENT_ARGS.json
+```
+
+For complex drafts, `wsbx.draft.save` and `wsbx.draft.submit` accept a
+`payload` object with the exact server-shaped route fields. The builder requires
+`payload.ywbh` to match the top-level `ywbh` and forces the correct `saveType`.
 
 `wsbx.invoice.list` defaults to pending invoices. Use
 `--args '{"query":"INVOICE_NUMBER","status":"used"}'` to check invoices already
@@ -188,6 +215,12 @@ Before `wsbx.draft.submit`, inspect both `wsbx.draft.get` and
 `wsbx.draft.status`. Submit only when the user explicitly authorized the exact
 receipt and fields. Never retry an ambiguous submission; inspect status first.
 See the repository's `docs/wsbx.md` for argument structure.
+
+International-travel work starts from `wsbx.intl.budget` and uses
+`wsbx.intl.get`, `wsbx.intl.currency.split`, `wsbx.intl.invoices`,
+`wsbx.intl.invoice.update`, and `wsbx.intl.files` as needed. WSBX draft support
+does not complete external International Office approval, foreign-exchange
+pre-review, bank exchange, or remittance.
 
 ## Learn Workflows
 

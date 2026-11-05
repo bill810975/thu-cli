@@ -37,8 +37,10 @@ agent。
 - 隐藏密码输入、SM2 加密、多因素认证，以及可选的 Keychain 密码回退。
 - 支持校园新闻、课程、作业、课表、日历、图书馆、体育、一卡通、网络、
   邮箱、发票、THOS、GitLab 等服务。
-- 支持日常报销（`052`）草稿：项目绑定、报销事项模板、电子发票、附件、
-  暂存、提交、删除和撤单。
+- 支持日常报销（`052`）、智能/境外票据（`051`）、境内差旅（`06`）、
+  会议（`19`）和境外差旅（`1206`）草稿，包括各路由的报销事项、
+  电子发票、附件、支付信息、国际差旅预算、人民币/外币明细、暂存、提交、
+  删除和撤单。
 - 支持 Learn 课程、通知、文件、作业、问卷和下载。
 - 支持 JSON 输出、操作发现、显式变更确认和防覆盖下载。
 - 提供可安装的 Codex skill 和可直接交给 agent 的安装 prompt。
@@ -47,8 +49,10 @@ agent。
 权限、验证码流程以及其余校园服务的覆盖范围与限制，以
 [docs/COVERAGE.md](docs/COVERAGE.md) 为准。
 
-日常报销客户端还使用真实账号完成了项目绑定和草稿暂存验证；没有提交真实
-审批单。
+日常报销客户端还使用真实账号完成了项目绑定和草稿暂存验证。新增的
+智能/境外票据、境内差旅、会议和境外差旅契约来自当前 WSBX 前端，
+并由离线夹具覆盖；仍需使用真实账号验证具体权限和可报销场景。客户端没有
+提交真实审批单。
 
 ## 环境要求
 
@@ -224,15 +228,18 @@ token 保存在权限为 `600` 的私有 sidecar 中，不会输出。完整的�
 
 ## Codex skill
 
-仓库包含一个可安装的 Codex skill：
+仓库包含两个可安装的 Codex skill：
 
 ```sh
 mkdir -p "$HOME/.codex/skills"
 cp -R skills/thu-cli "$HOME/.codex/skills/"
+cp -R skills/thu-reimbursement "$HOME/.codex/skills/"
 ```
 
 该 skill 介绍了操作发现、Info 与 Learn 工作流、会话续期、变更安全与密钥
-处理。若希望让 agent 自动完成 clone、构建和安装，可以直接把
+处理。报销 skill 会区分国内票据与境外 `INVOICE`/`RECEIPT`，并给出材料、
+审批、换汇和 CLI 操作路径。若希望让 agent 自动完成 clone、构建和安装，
+可以直接把
 [prompts/install-thu-cli.md](prompts/install-thu-cli.md) 中的 prompt 交给
 agent。
 
@@ -245,6 +252,7 @@ docs/                协议、覆盖范围、测试与许可说明
 licenses/            上游项目与依赖许可
 examples/            示例输入
 skills/thu-cli/      可复用 Codex skill
+skills/thu-reimbursement/  国内外票据报销流程 skill
 prompts/             agent 安装 prompt
 ```
 
