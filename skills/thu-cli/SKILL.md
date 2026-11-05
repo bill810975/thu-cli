@@ -74,39 +74,31 @@ thu-cli --session "$HOME/.config/thu-cli/learn.json" \
   --refresh --trust-device --non-interactive
 ```
 
-Do not add `--keychain` while this succeeds. The Keychain is only an optional
-fallback for the case where the persistent identity Cookie has expired and the
-user explicitly wants unattended password reauthentication. Store a fallback
-password in Keychain only after that need is observed:
-
-```sh
-thu-cli credential set --username USERNAME --confirm
-```
-
-The command prompts twice through macOS `security`; the password does not enter
-shell history or command arguments. Check and remove it without printing it:
-
-```sh
-thu-cli credential status --username USERNAME
-thu-cli credential delete --username USERNAME --confirm
-```
-
-Refresh an existing profile without clearing its Cookies:
+The identity service may stop accepting an unexpired trusted-device Cookie and
+show the password form again. For unattended renewal, store the account in the
+CLI's local credential JSON beside the selected session profile:
 
 ```sh
 thu-cli --session "$HOME/.config/thu-cli/info.json" \
-  login --username USERNAME --service info \
-  --refresh --trust-device --non-interactive
+  credential set --username USERNAME --confirm
+```
 
-thu-cli --session "$HOME/.config/thu-cli/learn.json" \
-  login --username USERNAME --service learn \
-  --refresh --trust-device --non-interactive
+The command prompts twice with hidden input. It writes plaintext username/password
+entries to `credentials.json` with mode `600`; the CLI refuses symlinks and
+broader permissions. Check or remove an entry without printing the password:
+
+```sh
+thu-cli --session "$HOME/.config/thu-cli/info.json" \
+  credential status --username USERNAME
+
+thu-cli --session "$HOME/.config/thu-cli/info.json" \
+  credential delete --username USERNAME --confirm
 ```
 
 `--refresh` reuses a still-valid trusted session. Ordinary `login` still clears
 the current profile to prevent accidental identity mixing; use `--refresh` for
-the non-destructive renewal path. Add `--keychain` only when persistent Cookie
-renewal has failed and a stored password is the chosen fallback.
+the non-destructive renewal path. If the server still requests a password, the
+matching local credential is used automatically when present.
 
 Successful login also writes non-secret refresh metadata beside the private
 Cookie profile. Read-only service calls use it to refresh an expired trusted
@@ -117,13 +109,10 @@ error because their outcome may already have been committed. Use
 
 If the server requires CAPTCHA, an untrusted-device MFA challenge, or another
 human action, `--non-interactive` fails instead of guessing. Do not extract
-Cookies from a browser, put a password in shell history, expose Keychain data,
-or loop authentication attempts.
-
-Do not open a GUI terminal merely to populate Keychain from an SSH workflow. If
-Keychain is explicitly chosen as the fallback and the keychain is locked, run
-`security unlock-keychain ~/Library/Keychains/login.keychain-db` in the terminal
-first; its prompt is terminal-based.
+Cookies from a browser, put a password in shell history, print the credential
+file, or loop authentication attempts. The local file is not protected from
+malware, administrators, backups/sync tools, or other processes owned by the
+same OS user.
 
 ## Info Workflows
 

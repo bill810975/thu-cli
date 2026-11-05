@@ -22,13 +22,14 @@ steps when its README or operation metadata already answers a question.
    - `cargo clippy --locked --all-targets -- -D warnings`
 5. Install `target/release/thu-cli` as `$HOME/.local/bin/thu-cli` with mode 0755.
    Do not use sudo unless the user explicitly chose a system-wide prefix.
-6. Install `skills/thu-cli` under `$HOME/.codex/skills/thu-cli` and validate it
-   with the available Codex skill validator.
+6. Install `skills/thu-cli` and `skills/thu-reimbursement` under
+   `$HOME/.codex/skills/` and validate both with the available Codex skill
+   validator.
 7. Verify `thu-cli --version`, `thu-cli --help`, `thu-cli services`, and
    `thu-cli describe learn homework`.
 8. Do not log in, request the user's password or MFA code, read session files,
-   create Keychain entries, or execute a mutating campus operation during
-   installation.
+   create local credential entries, or execute a mutating campus operation
+   during installation.
 
 Report the clone path, binary path, installed skill path, test counts, exact
 verification commands, and any blocker. Do not claim success if a build or

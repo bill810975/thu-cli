@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 use serde_json::{json, Value};
 use std::{fs, path::PathBuf};
 use thu_cli::{
-    app, auth, keychain, learn,
+    app, auth, credential, learn,
     session::{self, Session},
     thu,
 };
@@ -46,12 +46,9 @@ enum Command {
         /// Destination session to initialize
         #[arg(long, default_value = "info")]
         service: String,
-        /// Optional protected password file. Prefer the hidden prompt.
-        #[arg(long, conflicts_with = "keychain")]
-        password_file: Option<PathBuf>,
-        /// Read the password from macOS Keychain when credentials are required
+        /// Optional protected password file for a one-off login
         #[arg(long)]
-        keychain: bool,
+        password_file: Option<PathBuf>,
         /// Reuse the current session and refresh it only if authentication is required
         #[arg(long)]
         refresh: bool,
@@ -70,7 +67,7 @@ enum Command {
         #[arg(long)]
         non_interactive: bool,
     },
-    /// Manage an encrypted campus password in macOS Keychain
+    /// Manage the private local JSON credential used for unattended renewal
     Credential {
         #[command(subcommand)]
         command: CredentialCommand,
@@ -132,7 +129,7 @@ enum CredentialCommand {
 #[derive(clap::Args)]
 struct Call {
     operation: String,
-    /// Username for destination SSO; password prompted invisibly, never saved
+    /// Username for destination SSO; password is read locally or prompted invisibly
     #[arg(long)]
     username: Option<String>,
     /// Skip automatic destination SSO only when a valid target session already exists
@@ -211,6 +208,17 @@ fn password_from_file(path: &PathBuf) -> Result<Zeroizing<String>> {
     ))
 }
 
+fn local_password(session: &Session, username: &str) -> Result<Option<Zeroizing<String>>> {
+    credential::get(&session.credential_path(), username)
+}
+
+fn local_or_prompted_password(session: &Session, username: &str) -> Result<Zeroizing<String>> {
+    if let Some(password) = local_password(session, username)? {
+        return Ok(password);
+    }
+    password(None)
+}
+
 async fn execute_service(
     session: &Session,
     service: &str,
@@ -245,10 +253,12 @@ async fn refresh_session(session: &Session) -> Result<()> {
     match auth::login(&session.auth_client, &options).await {
         Ok(_) => Ok(()),
         Err(error) if auth::is_password_required(&error) => {
-            let secret = keychain::get(&profile.username).map_err(|_| {
-                error.context(
-                    "trusted-device refresh needs a hidden interactive login or the optional Keychain fallback",
-                )
+            let secret = local_password(session, &profile.username)?.ok_or_else(|| {
+                error.context(format!(
+                    "trusted-device renewal requires the local credential; run `thu-cli --session {} credential set --username {} --confirm`",
+                    session.path().display(),
+                    profile.username
+                ))
             })?;
             options.password = secret.to_string();
             auth::login(&session.auth_client, &options)
@@ -263,7 +273,7 @@ async fn roam_for_call(session: &Session, call: &Call, policy: &str, payload: &s
     let credentials = if let Some(user) = &call.username {
         Some(auth::LoginOptions {
             username: user.clone(),
-            password: password(None)?.to_string(),
+            password: local_or_prompted_password(session, user)?.to_string(),
             fingerprint: "thu-cli-native".into(),
             service: "info".into(),
             two_factor_method: None,
@@ -447,7 +457,6 @@ async fn run(cli: &Cli) -> Result<Value> {
             username,
             service,
             password_file,
-            keychain: use_keychain,
             refresh,
             fingerprint,
             two_factor_method,
@@ -455,7 +464,7 @@ async fn run(cli: &Cli) -> Result<Value> {
             webvpn,
             non_interactive,
         } => {
-            if !refresh && !use_keychain {
+            if !refresh {
                 session.clear()?;
             }
             let mut options = auth::LoginOptions {
@@ -473,12 +482,16 @@ async fn run(cli: &Cli) -> Result<Value> {
                 Err(error) if auth::is_password_required(&error) => {
                     let secret = if let Some(path) = password_file {
                         password_from_file(path)?
-                    } else if *use_keychain {
-                        keychain::get(username)?
+                    } else if let Some(password) = local_password(&session, username)? {
+                        password
                     } else if !*non_interactive {
                         password(None)?
                     } else {
-                        return Err(error);
+                        return Err(error.context(format!(
+                            "no local credential is saved for this account; run `thu-cli --session {} credential set --username {} --confirm`",
+                            session.path().display(),
+                            username
+                        )));
                     };
                     options.password = secret.to_string();
                     auth::login(&session.auth_client, &options).await
@@ -497,30 +510,33 @@ async fn run(cli: &Cli) -> Result<Value> {
         Command::Credential { command } => match command {
             CredentialCommand::Set { username, confirm } => {
                 if !confirm {
-                    bail!("Use --confirm to save or replace the Keychain credential");
+                    bail!("Use --confirm to save or replace the local credential");
                 }
-                keychain::set_interactive(username)?;
+                let path = session.credential_path();
+                credential::set_interactive(&path, username)?;
                 Ok(json!({
                     "credential_saved":true,
-                    "backend":"macOS Keychain",
-                    "service":keychain::KEYCHAIN_SERVICE,
-                    "username":username
+                    "backend":"local JSON",
+                    "path":path,
+                    "mode":"600"
                 }))
             }
             CredentialCommand::Delete { username, confirm } => {
                 if !confirm {
-                    bail!("Use --confirm to remove the Keychain credential");
+                    bail!("Use --confirm to remove the local credential");
                 }
-                keychain::delete(username)?;
-                Ok(json!({"credential_deleted":true,"username":username}))
+                let path = session.credential_path();
+                let deleted = credential::delete(&path, username)?;
+                Ok(json!({"credential_deleted":deleted,"backend":"local JSON","path":path}))
             }
             CredentialCommand::Status { username } => {
-                let available = keychain::get(username).is_ok();
+                let path = session.credential_path();
+                let available = credential::get(&path, username)?.is_some();
                 Ok(json!({
                     "credential_available":available,
-                    "backend":"macOS Keychain",
-                    "service":keychain::KEYCHAIN_SERVICE,
-                    "username":username
+                    "backend":"local JSON",
+                    "path":path,
+                    "mode":"600"
                 }))
             }
         },
@@ -533,7 +549,7 @@ async fn run(cli: &Cli) -> Result<Value> {
             let credentials = if let Some(user) = username {
                 Some(auth::LoginOptions {
                     username: user.clone(),
-                    password: password(None)?.to_string(),
+                    password: local_or_prompted_password(&session, user)?.to_string(),
                     fingerprint: fingerprint.clone(),
                     service: "info".into(),
                     two_factor_method: None,

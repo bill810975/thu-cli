@@ -14,10 +14,12 @@ secrets redacted, and any suggested mitigation.
 
 ## Sensitive local state
 
-The CLI can persist authenticated Cookies and, only when explicitly requested
-on macOS, a Keychain credential. Treat all of the following as secrets:
+The CLI can persist authenticated Cookies and, only when explicitly requested,
+plaintext account credentials in a mode-`600` local JSON file. Treat all of the
+following as secrets:
 
 - session Cookie stores;
+- `credentials.json`;
 - password files;
 - MFA and CAPTCHA responses;
 - imported browser Cookies;

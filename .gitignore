@@ -2,6 +2,9 @@
 /dist/
 /thu-cli
 *.cookies.json
+*.auth.json
+credentials.json
+credentials.lock
 session.json
 .env
 *.log

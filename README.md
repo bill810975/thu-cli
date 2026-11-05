@@ -35,7 +35,8 @@ For an agent-driven installation, give an agent the prompt in
 - Browser-like trusted login through `--trust-device`.
 - On-demand trusted-session refresh for read-only calls, with no background
   daemon required.
-- Hidden password input, SM2 encryption, MFA, and optional Keychain reuse.
+- Hidden password input, SM2 encryption, MFA, and an optional mode-600 local
+  JSON credential for unattended renewal.
 - Campus news search, courses, homework, schedules, calendar, library, sports,
   card, network, mail, invoices, THOS, GitLab, and other service operations.
 - Reimbursement drafts for daily (`052`), smart/foreign-invoice (`051`),
@@ -156,18 +157,26 @@ it automatically when a read-only call finds an expired session. State-changing
 calls are never replayed after their request may have reached the server. Use
 `--no-auto-refresh` to disable this recovery for one call.
 
-On macOS, an optional Keychain-backed password can be stored for the case where
-the persistent identity Cookie expires:
+If the identity service stops accepting the trusted-device Cookie, store the
+password in the CLI's private local JSON credential file:
 
 ```sh
-thu-cli credential set --username YOUR_STUDENT_ID --confirm
-thu-cli credential status --username YOUR_STUDENT_ID
+thu-cli --session "$HOME/.config/thu-cli/info.json" \
+  credential set --username YOUR_STUDENT_ID --confirm
+
+thu-cli --session "$HOME/.config/thu-cli/info.json" \
+  credential status --username YOUR_STUDENT_ID
 ```
 
-Keychain reuse is optional. If a Keychain is explicitly used from an SSH
-session and is locked, unlock it through a terminal prompt with
-`security unlock-keychain "$HOME/Library/Keychains/login.keychain-db"`. Do not
-open a GUI terminal solely for this CLI.
+The password is stored in plaintext in `credentials.json` beside the selected
+session profile, with file mode `600`; the CLI refuses symlinks and broader
+permissions. Read-only operations use the matching account entry automatically
+when the server requests password reauthentication. The password is still
+encrypted with SM2 for network transport and is never printed. This file is not
+protected against malware, an administrator, backup/sync software, or another
+process running as the same OS user. Use `credential delete ... --confirm` to
+remove an account entry. Info and Learn profiles in the same directory share the
+credential file, while separate usernames are stored as separate entries.
 
 See [docs/auth.md](docs/auth.md) for session lifecycle, MFA, WebVPN, and
 credential boundaries.

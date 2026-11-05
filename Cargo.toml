@@ -1,6 +1,6 @@
 [package]
 name = "thu-cli"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 description = "Native Rust command-line clients for Tsinghua campus services and Learn"
 license-file = "LICENSE"

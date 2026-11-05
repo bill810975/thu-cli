@@ -34,7 +34,8 @@ agent。
 - Info 与 Learn 使用相互隔离的持久会话。
 - 通过 `--trust-device` 建立接近浏览器的可信设备登录。
 - 只读调用遇到失效会话时按需自动续期，不需要后台常驻进程。
-- 隐藏密码输入、SM2 加密、多因素认证，以及可选的 Keychain 密码回退。
+- 隐藏密码输入、SM2 加密、多因素认证，以及用于无人值守续期的本地
+  mode-600 JSON 凭据。
 - 支持校园新闻、课程、作业、课表、日历、图书馆、体育、一卡通、网络、
   邮箱、发票、THOS、GitLab 等服务。
 - 支持日常报销（`052`）、智能/境外票据（`051`）、境内差旅（`06`）、
@@ -150,22 +151,24 @@ CLI 会在 Cookie 配置旁保存不含密钥的续期元数据。只读调用�
 会自动使用它刷新并重试一次；写请求一旦可能到达服务器，就不会被自动重放。
 单次调用可用 `--no-auto-refresh` 关闭该恢复行为。
 
-在 macOS 上，可以把密码作为 Keychain 回退，用于持久身份 Cookie 过期后的
-重新登录：
+如果身份系统不再接受可信设备 Cookie，可以把密码保存到 CLI 的私有本地
+JSON 凭据文件：
 
 ```sh
-thu-cli credential set --username YOUR_STUDENT_ID --confirm
-thu-cli credential status --username YOUR_STUDENT_ID
+thu-cli --session "$HOME/.config/thu-cli/info.json" \
+  credential set --username YOUR_STUDENT_ID --confirm
+
+thu-cli --session "$HOME/.config/thu-cli/info.json" \
+  credential status --username YOUR_STUDENT_ID
 ```
 
-Keychain 不是持久会话的必需项。如果明确选择 Keychain 回退，但通过 SSH
-运行时钥匙串处于锁定状态，应在终端中先执行：
-
-```sh
-security unlock-keychain "$HOME/Library/Keychains/login.keychain-db"
-```
-
-不要为了初始化这个命令行工具而额外打开图形终端。
+密码以明文保存在当前 session 配置文件旁的 `credentials.json`，文件权限强制
+为 `600`；CLI 会拒绝符号链接和更宽松的权限。只读操作遇到服务器要求重新
+输入密码时，会自动匹配用户名并使用该凭据。密码在网络传输前仍会使用 SM2
+加密，也不会被打印。这个文件不能防御恶意软件、管理员权限、备份/同步软件
+或以同一 macOS 用户身份运行的其他进程；可用
+`credential delete ... --confirm` 删除账户条目。同一目录下的 Info 与 Learn
+配置共享该凭据文件，不同用户名分别保存。
 
 会话生命周期、MFA、WebVPN 与凭据边界的更多说明见
 [docs/auth.md](docs/auth.md)。

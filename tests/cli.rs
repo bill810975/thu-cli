@@ -138,6 +138,37 @@ fn conference_preview_builds_payload_without_auth() {
 }
 
 #[test]
+fn credential_commands_use_local_json_without_keychain() {
+    let help = cli().args(["credential", "--help"]).output().unwrap();
+    assert!(help.status.success());
+    let text = String::from_utf8_lossy(&help.stdout);
+    assert!(text.contains("local JSON"));
+    assert!(!text.contains("Keychain"));
+
+    let login_help = cli().args(["login", "--help"]).output().unwrap();
+    assert!(login_help.status.success());
+    assert!(!String::from_utf8_lossy(&login_help.stdout).contains("keychain"));
+}
+
+#[test]
+fn missing_local_credential_reports_status_without_exposing_secrets() {
+    let d = tempfile::tempdir().unwrap();
+    let s = d.path().join("info.json");
+    let o = cli()
+        .arg("--session")
+        .arg(&s)
+        .arg("--compact")
+        .args(["credential", "status", "--username", "2023000000"])
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    let v: Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["credential_available"], false);
+    assert_eq!(v["backend"], "local JSON");
+    assert!(!String::from_utf8_lossy(&o.stdout).contains("password"));
+}
+
+#[test]
 fn global_help_and_version() {
     assert!(cli().arg("--help").status().unwrap().success());
     assert!(cli().arg("--version").status().unwrap().success());

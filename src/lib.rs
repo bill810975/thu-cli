@@ -1,7 +1,7 @@
 pub mod app;
 pub mod auth;
 pub mod auxiliary;
-pub mod keychain;
+pub mod credential;
 pub mod learn;
 pub mod session;
 pub mod thu;

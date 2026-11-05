@@ -220,15 +220,15 @@ async fn identity_response(
     if entry.contains("登录成功。正在重定向到") {
         return Ok(entry.to_owned());
     }
+    let fingerprint = options.map(|o| o.fingerprint.as_str()).unwrap_or_default();
+    if let Some((url, fields)) = passwordless_form(entry, fingerprint)? {
+        let response = post(client, &url, &fields).await?;
+        if !response.contains("sm2publicKey") {
+            return Ok(response);
+        }
+    }
     let key = text_of(entry, "#sm2publicKey");
     if key.is_empty() {
-        let fingerprint = options.map(|o| o.fingerprint.as_str()).unwrap_or_default();
-        if let Some((url, fields)) = passwordless_form(entry, fingerprint)? {
-            let response = post(client, &url, &fields).await?;
-            if !response.contains("sm2publicKey") {
-                return Ok(response);
-            }
-        }
         bail!("identity entry did not provide a public key or usable trusted session; log in again, or use browser session import for unsupported identity challenges");
     }
     let options = options.ok_or_else(|| {

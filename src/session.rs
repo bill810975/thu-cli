@@ -166,6 +166,14 @@ impl Session {
         )
     }
 
+    pub fn credential_path(&self) -> PathBuf {
+        crate::credential::path_for_session(&self.path)
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
     pub fn load_profile(&self) -> Result<Option<AuthProfile>> {
         let path = self.path.with_extension("auth.json");
         if !path.exists() {
