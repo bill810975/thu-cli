@@ -114,6 +114,28 @@ file, or loop authentication attempts. The local file is not protected from
 malware, administrators, backups/sync tools, or other processes owned by the
 same OS user.
 
+### Renewal Failure Triage
+
+An unexpired local Cookie, including `TSINGHUAUSERID`, does not prove that the
+identity server still accepts it. The identity page can contain both the
+trusted-device fields and an SM2 password form; the CLI must try the
+trusted-device form first and use the local credential only if the server still
+requests a password.
+
+When automatic renewal fails, follow this bounded sequence:
+
+1. Check `credential status --username USERNAME` without printing the file.
+2. If the user has authorized plaintext local credentials and the account entry
+   is missing or stale, run `credential set --username USERNAME --confirm` in a
+   real terminal and let the user type the password into its hidden prompts.
+   Never ask for the password in chat or pass it as a command-line argument.
+3. Retry `login --refresh --trust-device --non-interactive` exactly once.
+4. Verify the restored session with a read-only Info call, preferably
+   `thu wsbx.user`.
+5. If the same password form, MFA, or CAPTCHA still appears, stop and report
+   that stage. Do not loop, clear unrelated profiles, switch transports
+   blindly, extract Cookies from a browser, or read Keychain.
+
 ## Info Workflows
 
 For the current direct Info session, use `--no-roam` with news operations:
