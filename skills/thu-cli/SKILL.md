@@ -205,11 +205,21 @@ push unless the user explicitly requests and Finance permits another route.
 
 The normal sequence is: ingest and verify a source invoice in the receipt wallet,
 allocate a draft number, bind a project, read the live route template, bind the
-unused wallet invoice, upload evidence, save, inspect, then submit separately.
+unused wallet invoice, upload evidence, allocate payment, save, inspect, then
+submit separately.
 `invoice.add`, `invoice.add-witness`, `draft.bind-project`, `invoice.bind`,
 `attachment.upload`, `draft.save`, and `draft.submit` mutate server state.
 `draft.template`, `draft.get`, and invoice unbinding dispatch by route rather
 than assuming `052`.
+
+Daily `052` submission requires allocated payment rows totaling the
+reimbursement amount. For an employee-paid expense, pass
+`"self_payment": true`; if several bank accounts exist, use
+`"self_payment":{"account":"gzkh1","note":"报销款"}`. The CLI reads the
+employee's protected account data, creates a method-`08` campus private-payment
+row, and refuses a zero or mismatched allocation before submission.
+`wsbx.payment.init` verifies saved rows and `wsbx.payment.methods` lists enabled
+methods.
 
 Use CLI receipt ingestion for a downloaded PDF, OFD, image, or supported ZIP:
 

@@ -86,7 +86,11 @@ into `052`. Domestic e-invoice daily reimbursement defaults to paperless
 8. `wsbx.attachment.upload` adds supporting evidence.
 9. `wsbx.draft.preview` validates the complete route payload offline, then
    `wsbx.draft.save` saves the draft.
-10. `wsbx.draft.get` and `wsbx.draft.status` are the final inspection before any
+10. For a personally paid expense, allocate `self_payment:true` (or select
+    `self_payment.account` when multiple accounts exist). Payment rows must total
+    the reimbursement items exactly.
+11. `wsbx.draft.get`, `wsbx.draft.status`, and `wsbx.payment.init` are the final
+    inspection before any
    separately authorized `wsbx.draft.submit`.
 
 ## Stop Conditions

@@ -674,6 +674,135 @@ fn payments(a: &Value) -> Result<Map<String, Value>> {
     Ok(result)
 }
 
+fn sum_record_amounts(records: &[Value], key: &str) -> Result<u64> {
+    records.iter().try_fold(0_u64, |total, record| {
+        total
+            .checked_add(amount_cents(record.get(key).unwrap_or(&Value::Null))?)
+            .ok_or_else(|| anyhow!("reimbursement amount is too large"))
+    })
+}
+
+fn daily_amount_totals(payload: &Value) -> Result<(u64, u64)> {
+    let items = payload["bxsxList"]
+        .as_array()
+        .ok_or_else(|| anyhow!("daily payload must contain a bxsxList array"))?;
+    let reimbursement = sum_record_amounts(items, "sbje")?;
+    let mut payment = 0_u64;
+    for key in ["cjkList", "gwkList", "xmzzList", "dszzList", "dgzzList"] {
+        let records = payload[key]
+            .as_array()
+            .ok_or_else(|| anyhow!("daily payload must contain {key} array"))?;
+        payment = payment
+            .checked_add(sum_record_amounts(records, "dje")?)
+            .ok_or_else(|| anyhow!("reimbursement payment amount is too large"))?;
+    }
+    Ok((reimbursement, payment))
+}
+
+fn validate_daily_payment_allocation(payload: &Value) -> Result<()> {
+    let (reimbursement, payment) = daily_amount_totals(payload)?;
+    if payment == 0 {
+        bail!(
+            "daily submission requires an allocated payment row; use self_payment:true or provide payments.dszzList"
+        )
+    }
+    if payment != reimbursement {
+        bail!(
+            "daily payment rows total {} but reimbursement items total {}",
+            format_amount(payment),
+            format_amount(reimbursement)
+        )
+    }
+    Ok(())
+}
+
+fn self_payment_config(value: &Value) -> Result<Option<(Option<String>, String)>> {
+    match value {
+        Value::Bool(false) | Value::Null => Ok(None),
+        Value::Bool(true) => Ok(Some((None, "报销款".to_owned()))),
+        Value::Object(object) => {
+            let account = object
+                .get("account")
+                .and_then(Value::as_str)
+                .filter(|value| !value.is_empty())
+                .map(str::to_owned);
+            let note = object
+                .get("note")
+                .and_then(Value::as_str)
+                .unwrap_or("报销款")
+                .to_owned();
+            Ok(Some((account, note)))
+        }
+        _ => bail!("self_payment must be a boolean or a JSON object"),
+    }
+}
+
+fn employee_self_payment_row(
+    employee: &Value,
+    account_hint: Option<&str>,
+    amount: &str,
+    note: &str,
+) -> Result<Value> {
+    let ygbh = nonempty_string(employee, "ygbh")?;
+    let ygmc = nonempty_string(employee, "ygmc")?;
+    let accounts = [
+        ("yhzh", "工资卡号", "yhzh", "bank"),
+        ("gzkh1", "银行账户1", "gzkh1", "yh1"),
+        ("gzkh2", "银行账户2", "gzkh2", "yh2"),
+        ("gzkh3", "银行账户3", "gzkh3", "yh3"),
+        ("gzkh4", "银行账户4", "gzkh4", "yh4"),
+        ("gzkh5", "银行账户5", "gzkh5", "yh5"),
+        ("gwkh", "公务卡", "gwkh", "bank"),
+    ];
+    let available = accounts
+        .iter()
+        .filter_map(|(kind, label, account_key, bank_key)| {
+            employee
+                .get(*account_key)
+                .and_then(Value::as_str)
+                .filter(|value| !value.is_empty())
+                .map(|account| (*kind, *label, account, *bank_key))
+        })
+        .collect::<Vec<_>>();
+
+    let (_, label, account, bank_key) = match account_hint {
+        Some(hint) => available
+            .iter()
+            .find(|(kind, _, _, _)| *kind == hint)
+            .copied()
+            .ok_or_else(|| anyhow!("self_payment.account is not an available bank account"))?,
+        None if available.len() == 1 => available[0],
+        None if available.is_empty() => {
+            bail!("no bank account is available for a private reimbursement payment")
+        }
+        None => {
+            let choices = available
+                .iter()
+                .map(|(kind, _, _, _)| *kind)
+                .collect::<Vec<_>>()
+                .join(", ");
+            bail!("multiple bank accounts are available; set self_payment.account to one of: {choices}")
+        }
+    };
+    let bank = employee
+        .get(bank_key)
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(label);
+    Ok(json!({
+        "zffsbh": "08",
+        "dfdw": ygbh,
+        "wyzgxm": ygmc,
+        "yhzh": account,
+        "dfzh": account,
+        "dfyh": bank,
+        "dfpro": "zgbh",
+        "dje": amount,
+        "fy": note,
+        "gwkxfid": ""
+    }))
+}
+
 fn amount_cents(value: &Value) -> Result<u64> {
     let text = match value {
         Value::Null => return Ok(0),
@@ -2110,6 +2239,8 @@ pub fn operations() -> Vec<Value> {
         json!({"name":"wsbx.draft.get","mutating":false,"description":"Read a reimbursement draft using the route-specific detail endpoint","required":["ywbh"],"optional":["ywlx"],"upstream":"rmb/info/get or intl/travel/init"}),
         json!({"name":"wsbx.draft.preview","mutating":false,"description":"Build and validate a route-specific save/submit payload locally; daily 052 defaults to paperless online push","required":["ywbh"],"optional":["ywlx","project","phone","purpose","description","items","payments","no_paper","is_online","base_info","invoice_list","paper_items","travel","conference","conference_base","intl","intl_budget","travelers","expense_rows","actual_line","actual_start_date","actual_end_date","payload","operator","operator_name","submit"],"upstream":"local payload builder"}),
         json!({"name":"wsbx.draft.status","mutating":false,"description":"Read the workflow state of a receipt","required":["ywbh"],"optional":[],"upstream":"common/get/ywbxr"}),
+        json!({"name":"wsbx.payment.init","mutating":false,"description":"Read server-initialized repayment, card, private-payee, public-transfer, and project-transfer rows","required":["ywbh"],"optional":[],"upstream":"pay/init"}),
+        json!({"name":"wsbx.payment.methods","mutating":false,"description":"List payment methods enabled for a reimbursement route","required":[],"optional":["ywlx"],"upstream":"pay/method/get"}),
         json!({"name":"wsbx.draft.create","mutating":true,"description":"Allocate a new reimbursement business number without submitting a receipt","required":[],"optional":["ywlx"],"upstream":"common/ywbh/get"}),
         json!({"name":"wsbx.draft.template","mutating":false,"description":"Read the route-specific expense template or international-travel initialization data","required":["ywbh","project"],"optional":["ywlx"],"upstream":"zdhb/template/get, common/templateInfo/get, common/tempInfo, or intl/travel/init"}),
         json!({"name":"wsbx.draft.bind-project","mutating":true,"description":"Bind a project to a draft and return its reimbursement-item template","required":["ywbh","project"],"optional":["ywlx","old_project","operator"],"upstream":"common/updateXmInfo"}),
@@ -2126,8 +2257,8 @@ pub fn operations() -> Vec<Value> {
         json!({"name":"wsbx.attachment.list","mutating":false,"description":"List attachments on a draft","required":["ywbh"],"optional":["ywlx"],"upstream":"file/get/list"}),
         json!({"name":"wsbx.attachment.upload","mutating":true,"description":"Upload one attachment to a draft","required":["ywbh","file","attachment_type"],"optional":["ywlx"],"upstream":"file/common/upload/file"}),
         json!({"name":"wsbx.attachment.delete","mutating":true,"description":"Delete one attachment from a draft","required":["attachment"],"optional":["fjly"],"upstream":"file/uploadfile/delete"}),
-        json!({"name":"wsbx.draft.save","mutating":true,"description":"Validate and save a route-specific draft; daily 052 defaults to paperless online push","required":["ywbh"],"optional":["ywlx","project","phone","purpose","description","items","payments","no_paper","is_online","base_info","invoice_list","paper_items","travel","conference","conference_base","intl","intl_budget","travelers","expense_rows","actual_line","actual_start_date","actual_end_date","payload","operator","operator_name"],"upstream":"pay/whole/submit, clf/gn/tmp/save, or intl/travel/save"}),
-        json!({"name":"wsbx.draft.submit","mutating":true,"description":"Submit a fully prepared route-specific reimbursement; daily 052 defaults to online push; inspect state before retrying","required":["ywbh"],"optional":["ywlx","project","phone","purpose","description","items","payments","no_paper","is_online","base_info","invoice_list","paper_items","travel","conference","conference_base","intl","intl_budget","travelers","expense_rows","actual_line","actual_start_date","actual_end_date","payload","operator","operator_name"],"upstream":"pay/whole/submit, clf/gn/tmp/save, or intl/travel/save"}),
+        json!({"name":"wsbx.draft.save","mutating":true,"description":"Validate and save a route-specific draft; daily 052 defaults to paperless online push","required":["ywbh"],"optional":["ywlx","project","phone","purpose","description","items","payments","self_payment","no_paper","is_online","base_info","invoice_list","paper_items","travel","conference","conference_base","intl","intl_budget","travelers","expense_rows","actual_line","actual_start_date","actual_end_date","payload","operator","operator_name"],"upstream":"pay/whole/submit, clf/gn/tmp/save, or intl/travel/save"}),
+        json!({"name":"wsbx.draft.submit","mutating":true,"description":"Submit a fully prepared route-specific reimbursement; daily 052 defaults to online push and requires payment allocation","required":["ywbh"],"optional":["ywlx","project","phone","purpose","description","items","payments","self_payment","no_paper","is_online","base_info","invoice_list","paper_items","travel","conference","conference_base","intl","intl_budget","travelers","expense_rows","actual_line","actual_start_date","actual_end_date","payload","operator","operator_name"],"upstream":"pay/whole/submit, clf/gn/tmp/save, or intl/travel/save"}),
         json!({"name":"wsbx.draft.delete","mutating":true,"description":"Permanently delete a draft by business number","required":["ywbh"],"optional":[],"upstream":"todoEs/receipt/delete"}),
         json!({"name":"wsbx.draft.revoke","mutating":true,"description":"Request withdrawal of a submitted receipt by business number","required":["ywbh"],"optional":[],"upstream":"todoEs/receipt/revoke"}),
         json!({"name":"wsbx.conference.budgets","mutating":false,"description":"Search approved conference budgets","required":[],"optional":["page_size","page_number","is_myself","budget_number","query","br"],"upstream":"hyf/ys/page"}),
@@ -2263,6 +2394,28 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                 .get(
                     "/common/get/ywbxr",
                     json!({"ywbh": required(a, "ywbh")?}),
+                    None,
+                )
+                .await
+        }
+        "wsbx.payment.init" => {
+            client
+                .post_read(
+                    "/pay/init",
+                    json!({
+                        "ywbh": required(a, "ywbh")?,
+                        "userName": client.auth.as_ref().map(|auth| auth.user_name.as_str()).unwrap_or(""),
+                        "userId": user_id(&client)?
+                    }),
+                    None,
+                )
+                .await
+        }
+        "wsbx.payment.methods" => {
+            client
+                .get(
+                    "/pay/method/get",
+                    json!({"ywlx": route_arg(a)?.ywlx()}),
                     None,
                 )
                 .await
@@ -2856,6 +3009,30 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                     .unwrap_or(""));
             }
             let mut payload = save_payload(&effective_args, route, submit, &operator)?;
+            if let Some(value) = effective_args.get("self_payment") {
+                if let Some((account, note)) = self_payment_config(value)? {
+                    if route != ReimbursementRoute::Daily {
+                        bail!("self_payment is currently supported only for daily route 052")
+                    }
+                    let (reimbursement, existing_payment) = daily_amount_totals(&payload)?;
+                    if existing_payment != 0 {
+                        bail!("self_payment cannot be combined with nonzero payment rows")
+                    }
+                    let employee = client
+                        .get("/common/employee", json!({"ygbh": user_id(&client)?}), None)
+                        .await?;
+                    let row = employee_self_payment_row(
+                        &employee["data"],
+                        account.as_deref(),
+                        &format_amount(reimbursement),
+                        &note,
+                    )?;
+                    payload["dszzList"] = json!([row]);
+                }
+            }
+            if submit && route == ReimbursementRoute::Daily {
+                validate_daily_payment_allocation(&payload)?;
+            }
             if submit {
                 let existing = if route == ReimbursementRoute::InternationalTravel {
                     client
@@ -3258,6 +3435,46 @@ mod tests {
     }
 
     #[test]
+    fn daily_submission_requires_matching_payment_allocation() {
+        let mut payload = json!({
+            "bxsxList": [{"sbje": "21.71"}],
+            "cjkList": [],
+            "gwkList": [],
+            "xmzzList": [],
+            "dszzList": [],
+            "dgzzList": []
+        });
+        assert!(validate_daily_payment_allocation(&payload).is_err());
+        payload["dszzList"] = json!([{"dje": "21.70"}]);
+        assert!(validate_daily_payment_allocation(&payload).is_err());
+        payload["dszzList"] = json!([{"dje": "21.71"}]);
+        assert!(validate_daily_payment_allocation(&payload).is_ok());
+    }
+
+    #[test]
+    fn self_payment_uses_an_explicit_or_unique_bank_account() {
+        let employee = json!({
+            "ygbh": "9999000001",
+            "ygmc": "Fixture User",
+            "gzkh4": "9999000000000001",
+            "yh4": "BOC"
+        });
+        let row = employee_self_payment_row(&employee, None, "21.71", "报销款").unwrap();
+        assert_eq!(row["zffsbh"], "08");
+        assert_eq!(row["dfdw"], "9999000001");
+        assert_eq!(row["dje"], "21.71");
+        assert_eq!(row["dfyh"], "BOC");
+
+        let mut multiple = employee;
+        multiple["gzkh1"] = json!("9999000000000002");
+        multiple["yh1"] = json!("ICBC");
+        assert!(employee_self_payment_row(&multiple, None, "21.71", "报销款").is_err());
+        let selected =
+            employee_self_payment_row(&multiple, Some("gzkh1"), "21.71", "报销款").unwrap();
+        assert_eq!(selected["yhzh"], "9999000000000002");
+    }
+
+    #[test]
     fn reimbursement_routes_match_the_frontend_contract() {
         assert_eq!(
             ReimbursementRoute::from_ywlx("052").unwrap(),
@@ -3498,6 +3715,25 @@ mod tests {
             .iter()
             .any(|operation| operation["name"] == "wsbx.invoice.add"
                 && operation["mutating"] == true));
+    }
+
+    #[test]
+    fn payment_initialization_is_discoverable_and_read_only() {
+        let operations = operations();
+        for name in ["wsbx.payment.init", "wsbx.payment.methods"] {
+            let operation = operations
+                .iter()
+                .find(|operation| operation["name"] == name)
+                .unwrap_or_else(|| panic!("{name} must be discoverable"));
+            assert_eq!(operation["mutating"], false);
+        }
+        assert_eq!(
+            operations
+                .iter()
+                .find(|operation| operation["name"] == "wsbx.payment.init")
+                .unwrap()["required"],
+            json!(["ywbh"])
+        );
     }
 
     #[test]

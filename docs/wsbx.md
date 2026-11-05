@@ -165,9 +165,14 @@ The same argument file can be used with `wsbx.draft.save` or
 8. Bind unused wallet invoices with `wsbx.invoice.bind`.
 9. Read and upload the required files with `wsbx.attachment.types`,
    `wsbx.attachment.list`, and `wsbx.attachment.upload`.
-10. Save with `wsbx.draft.save`.
-11. Inspect with `wsbx.draft.get` and `wsbx.draft.status`.
-12. Submit separately only after explicit authorization for the exact receipt,
+10. Allocate the reimbursement amount to a payment method. For a daily expense
+    already paid personally, use `"self_payment": true`; if the employee has
+    multiple bank accounts, use
+    `"self_payment": {"account": "gzkh1", "note": "报销款"}`.
+11. Save with `wsbx.draft.save`.
+12. Inspect with `wsbx.draft.get`, `wsbx.draft.status`, and
+    `wsbx.payment.init`.
+13. Submit separately only after explicit authorization for the exact receipt,
     project, amount, expense items, attachments, and payment rows.
 
 Invoice binding is route-aware:
@@ -204,6 +209,27 @@ For domestic e-invoice daily reimbursement (`052`), `is_online=true` and
 `no_paper=true` are the CLI defaults. Submission then uses workflow state `8`
 (online push). Pass either value as `false` only for an explicitly different
 approved workflow; the builder also accepts the strings `"1"` and `"0"`.
+
+Daily submission also requires payment allocation. The explicit `payments`
+object remains available for repayment, card, private-payee, public-transfer,
+and project-transfer rows. For the current employee's own bank account,
+`self_payment: true` builds a campus private-payment row using the unique
+available account. If more than one account exists, select one of `yhzh`,
+`gzkh1` through `gzkh5`, or `gwkh`:
+
+```json
+{
+  "self_payment": {
+    "account": "gzkh1",
+    "note": "报销款"
+  }
+}
+```
+
+The CLI fetches the employee bank data, masks it from normal status output, and
+requires the payment rows to total exactly the reimbursement item total before
+submitting. Use `wsbx.payment.init` to inspect saved payment rows after a save
+and `wsbx.payment.methods` to inspect methods enabled for the route.
 
 Each selected `items` row carries the live template's `jjflkmbh`,
 `jjflkmmc`, electronic-invoice amount/count fields, and paper-receipt

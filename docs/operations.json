@@ -2102,6 +2102,26 @@
       "upstream": "common/get/ywbxr"
     },
     {
+      "description": "Read server-initialized repayment, card, private-payee, public-transfer, and project-transfer rows",
+      "mutating": false,
+      "name": "wsbx.payment.init",
+      "optional": [],
+      "required": [
+        "ywbh"
+      ],
+      "upstream": "pay/init"
+    },
+    {
+      "description": "List payment methods enabled for a reimbursement route",
+      "mutating": false,
+      "name": "wsbx.payment.methods",
+      "optional": [
+        "ywlx"
+      ],
+      "required": [],
+      "upstream": "pay/method/get"
+    },
+    {
       "description": "Allocate a new reimbursement business number without submitting a receipt",
       "mutating": true,
       "name": "wsbx.draft.create",
@@ -2323,6 +2343,7 @@
         "description",
         "items",
         "payments",
+        "self_payment",
         "no_paper",
         "is_online",
         "base_info",
@@ -2348,7 +2369,7 @@
       "upstream": "pay/whole/submit, clf/gn/tmp/save, or intl/travel/save"
     },
     {
-      "description": "Submit a fully prepared route-specific reimbursement; daily 052 defaults to online push; inspect state before retrying",
+      "description": "Submit a fully prepared route-specific reimbursement; daily 052 defaults to online push and requires payment allocation",
       "mutating": true,
       "name": "wsbx.draft.submit",
       "optional": [
@@ -2359,6 +2380,7 @@
         "description",
         "items",
         "payments",
+        "self_payment",
         "no_paper",
         "is_online",
         "base_info",

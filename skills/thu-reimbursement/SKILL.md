@@ -115,7 +115,11 @@ creating one:
    `wsbx.attachment.upload`, using a category returned by
    `wsbx.attachment.types`.
 6. Run `wsbx.draft.preview` against the exact draft payload.
-7. Save with `wsbx.draft.save`.
+7. Allocate the amount to payment. For a personally paid daily expense, set
+   `self_payment:true`, or select a named account when multiple exist. The
+   payment total must equal the reimbursement total.
+8. Save with `wsbx.draft.save`.
+9. Inspect `wsbx.payment.init` together with the draft before submission.
 
 Paper, fiscal, internal, or non-pooled receipts usually need attachment upload
 and the supporting evidence listed for that expense type.
