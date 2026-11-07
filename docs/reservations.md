@@ -1,6 +1,10 @@
 # Library and sports service coverage
 
-Native adapters derived from `packages/thu-info-lib/src/lib/library.ts` and `sports.ts` in thu-info-app. Every request requires a valid session for its specific service. A WebVPN cookie alone does not prove that seat, CAB room, and sports SSO sessions exist. No authenticated production calls were made during development.
+Library support is ported from `packages/thu-info-lib/src/lib/library.ts`. The
+retired sports `gymbook` adapter has been replaced by a native client for the
+current venue platform at `https://www.sports.tsinghua.edu.cn/venue/`. Every
+request still requires a valid Tsinghua identity session and the venue service's
+own SSO exchange.
 
 ## Library operations
 
@@ -30,20 +34,36 @@ Room member IDs are **CAB `accNo`**, not university student numbers. Obtain them
 
 ## Sports operations
 
-| Upstream | CLI operation | Behavior |
-|---|---|---|
-| sportsIdInfoList | sports.venues | Eight upstream venue/item pairs; availability may change |
-| getSportsResources | sports.resources | Fetch limits, phone, resource hashes, price and status; parse upstream script syntax without executing JS |
-| internal getSportsPhoneNumber | sports.phone | Native contact read |
-| updateSportsPhoneNumber | sports.phone-update | Validate mobile format, native update |
-| getSportsCaptchaUrlMethod | sports.captcha | Returns image URL; fetch with the same cookie session and solve manually |
-| getSportsReservationRecords | sports.records | Parse paid and unpaid tables, payment and cancellation IDs |
-| makeSportsReservation | sports.book | Create order only, **never auto-pay**; server success message required |
-| unsubscribeSportsReservation | sports.cancel | Native cancellation |
-| paySportsReservation | sports.payment-qr | Native multi-step ID/token check, form submission and Alipay QR extraction; manual final payment |
-| alternative handoff | sports.payment-start | Prepare first payment form only |
+The current service performs a one-time SSO token exchange. The venue token is
+kept in the private mode-600 `sports-auth` sidecar beside the selected Info
+profile. Login, cookie import, logout, or a profile identity change invalidates
+that sidecar.
 
-`sports.payment-qr` implements the upstream funds-platform ID/token check and QR extraction chain. It only accepts HTTPS form actions on tsinghua.edu.cn or alipay.com domains. A newly introduced payment provider fails closed for manual continuation. `sports.payment-start` is an alternative that stops after the first form. Neither completes a payment. A prepared payment form is sensitive, transient data; do not save or publish it. Review amount and finish payment yourself in Alipay. The full live chain has not been authenticated-tested.
+| CLI operation | Behavior |
+|---|---|
+| sports.auth-status | Verify the venue account and SSO session |
+| sports.scenes | List current venues/scenes; `query` filters by name |
+| sports.areas | List device kinds, buildings, and rooms for a scene |
+| sports.site-types | List the site-kind dictionary used by `site_kind_id` |
+| sports.scene-detail | Read venue metadata and reservation mode |
+| sports.availability | Return compact bookable courts/sessions for a date; unavailable sessions are filtered by default |
+| sports.pay-types | Read enabled online payment channels and supported booking payment modes |
+| sports.records | List the authenticated user's reservations and orders without member identity data |
+| sports.preflight | Resolve one exact site/session and validate its form, payment mode, price, and captcha requirement without writing |
+| sports.book | Revalidate availability, lock the site, create one reservation, and create/check the order; it never completes payment |
+| sports.cancel | Cancel one explicitly identified reservation |
+
+The current frontend maps fee `payType` values `1` and `3` to `PAY_ONLINE`, and
+`2` to `PAY_OFFLINE`. `PAY_CARD` is available only when the venue exposes a
+usable card. Availability output intentionally omits reservation-holder details
+and raw frontend payloads.
+
+The safe sequence is `scenes` → `availability` → `preflight` → explicit user
+confirmation → `book`. `sports.book` requires `--confirm`; a cancelled or failed
+`addReserve` releases a previously obtained short lock. `payment_completed` in
+the result is always false. If an online order is generated, complete payment
+in the official venue/order page before its hold expires. Never retry an
+ambiguous booking response without checking `sports.records`.
 
 ## Examples
 
@@ -51,7 +71,15 @@ Pass JSON using the top-level CLI's service-call command, e.g. operation `librar
 
 - Seat booking arguments: `{"seat_id":123,"section_id":45,"user_id":"2023...","type":1,"date":"2026-11-12"}`.
 - Room booking: `{"device_id":123,"start":"2026-11-12 10:00","end":"2026-11-12 12:00","members":[123456]}`.
-- Sports resources: `{"gym_id":"3998000","item_id":"4045681","date":"2026-11-12"}`.
-- Sports booking: use the current `resHash` from resources, explicit price, phone and human-entered captcha. A stale hash/captcha can fail. No racing, automated captcha solving or automatic retries are implemented.
+- Sports scenes: `thu-cli thu sports.scenes --args '{"query":"网球"}'`.
+- Sports availability: `{"scene_uuid":"SCENE_UUID","date":"2026-11-12"}`.
+- Sports preflight: `{"scene_uuid":"SCENE_UUID","site_uuid":"SITE_UUID","start":"2026-11-12 18:00","end":"2026-11-12 19:00","pay_type":"PAY_ONLINE"}`.
+- Sports booking: use the exact UUIDs and normalized start/end returned by availability, repeat the preflight, then add `--confirm`.
+
+The CLI does not solve captchas or approval requirements. If preflight reports a
+captcha or custom form, complete that requirement through explicit arguments
+only when the current frontend contract supports it; otherwise stop rather than
+race or guess. No automatic retries are implemented for locks, bookings, or
+cancellations.
 
 The core CLI must guard all operations whose metadata has `mutating:true`. Service-specific business restrictions remain enforced by the university. Offline parser tests do not establish that live page layouts or policy remain unchanged.

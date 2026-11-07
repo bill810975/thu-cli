@@ -37,6 +37,8 @@ Read-only live checks have been completed for:
 - Learn authentication and persistent session refresh;
 - Learn semester and course listing;
 - Learn homework listing across current courses.
+- current sports-venue SSO, scene/area discovery, availability, payment-channel
+  reads, reservation records, and exact-slot booking preflight.
 
 No live course selection, homework submission, mail delivery, reservation,
 payment, account-security mutation, or other server-side write was performed.

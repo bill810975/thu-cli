@@ -1759,109 +1759,147 @@
       "upstream": "thu-info-lib/src/lib/library.ts"
     },
     {
-      "description": "Known venue and item IDs from upstream",
+      "description": "Current sports venue account and session state",
       "mutating": false,
-      "name": "sports.venues",
+      "name": "sports.auth-status",
       "optional": [],
       "required": [],
-      "upstream": "thu-info-lib/src/lib/sports.ts"
+      "upstream": "sports.tsinghua.edu.cn/venue"
     },
     {
-      "description": "Get resource hashes, costs and reservation limits",
+      "description": "List current sports venues and bookable scenes",
       "mutating": false,
-      "name": "sports.resources",
+      "name": "sports.scenes",
+      "optional": [
+        "query"
+      ],
+      "required": [],
+      "upstream": "sports.tsinghua.edu.cn/venue"
+    },
+    {
+      "description": "List device kinds, buildings and rooms used to scope sports availability",
+      "mutating": false,
+      "name": "sports.areas",
       "optional": [],
       "required": [
-        "gym_id",
-        "item_id",
+        "scene_uuid"
+      ],
+      "upstream": "sports.tsinghua.edu.cn/venue"
+    },
+    {
+      "description": "List bookable site types for a sports scene",
+      "mutating": false,
+      "name": "sports.site-types",
+      "optional": [],
+      "required": [
+        "scene_uuid"
+      ],
+      "upstream": "sports.tsinghua.edu.cn/venue"
+    },
+    {
+      "description": "Read rules, opening hours and booking mode for a sports scene",
+      "mutating": false,
+      "name": "sports.scene-detail",
+      "optional": [],
+      "required": [
+        "scene_uuid"
+      ],
+      "upstream": "sports.tsinghua.edu.cn/venue"
+    },
+    {
+      "description": "List concise bookable courts, pitches, tables and time sessions",
+      "mutating": false,
+      "name": "sports.availability",
+      "optional": [
+        "page_num",
+        "page_size",
+        "site_kind_id",
+        "dev_kind_uuid",
+        "class_type_uuid",
+        "class_type_enum",
+        "include_unavailable"
+      ],
+      "required": [
+        "scene_uuid",
         "date"
       ],
-      "upstream": "thu-info-lib/src/lib/sports.ts"
+      "upstream": "sports.tsinghua.edu.cn/venue"
     },
     {
-      "description": "Current reservation phone",
+      "description": "List online payment channels and accepted booking payment-mode values",
       "mutating": false,
-      "name": "sports.phone",
-      "optional": [],
-      "required": [],
-      "upstream": "thu-info-lib/src/lib/sports.ts"
-    },
-    {
-      "description": "Set reservation contact phone",
-      "mutating": true,
-      "name": "sports.phone-update",
+      "name": "sports.pay-types",
       "optional": [],
       "required": [
-        "phone",
-        "user_id"
+        "site_uuid",
+        "site_type"
       ],
-      "upstream": "thu-info-lib/src/lib/sports.ts"
+      "upstream": "sports.tsinghua.edu.cn/venue"
     },
     {
-      "description": "Captcha image URL to download with same session",
-      "mutating": false,
-      "name": "sports.captcha",
-      "optional": [],
-      "required": [],
-      "upstream": "thu-info-lib/src/lib/sports.ts"
-    },
-    {
-      "description": "Paid and unpaid sports reservations",
+      "description": "List sports reservations and generated orders",
       "mutating": false,
       "name": "sports.records",
-      "optional": [],
+      "optional": [
+        "page_num",
+        "page_size"
+      ],
       "required": [],
-      "upstream": "thu-info-lib/src/lib/sports.ts"
+      "upstream": "sports.tsinghua.edu.cn/venue"
     },
     {
-      "description": "Create a sports reservation; never auto-pay",
+      "description": "Validate one exact session, payment mode and booking form without reserving it",
+      "mutating": false,
+      "name": "sports.preflight",
+      "optional": [
+        "site_uuid",
+        "site_name",
+        "pay_type",
+        "site_kind_id",
+        "dev_kind_uuid",
+        "class_type_uuid",
+        "class_type_enum"
+      ],
+      "required": [
+        "scene_uuid",
+        "start",
+        "end"
+      ],
+      "upstream": "sports.tsinghua.edu.cn/venue"
+    },
+    {
+      "description": "Lock and book one available sports session; does not complete payment",
       "mutating": true,
       "name": "sports.book",
-      "optional": [],
-      "required": [
-        "total_cost",
-        "phone",
-        "gym_id",
-        "item_id",
-        "date",
+      "optional": [
+        "site_uuid",
+        "site_name",
+        "members",
         "captcha",
-        "resource_hash"
+        "form_variables",
+        "choose_candidates",
+        "site_kind_id",
+        "dev_kind_uuid",
+        "class_type_uuid",
+        "class_type_enum"
       ],
-      "upstream": "thu-info-lib/src/lib/sports.ts"
+      "required": [
+        "scene_uuid",
+        "start",
+        "end",
+        "pay_type"
+      ],
+      "upstream": "sports.tsinghua.edu.cn/venue"
     },
     {
-      "description": "Cancel a sports booking",
+      "description": "Cancel one sports reservation",
       "mutating": true,
       "name": "sports.cancel",
       "optional": [],
       "required": [
-        "book_id"
+        "resv_uuid"
       ],
-      "upstream": "thu-info-lib/src/lib/sports.ts"
-    },
-    {
-      "description": "Prepare payment form for manual continuation; does not pay",
-      "mutating": true,
-      "name": "sports.payment-start",
-      "optional": [
-        "receipt_title"
-      ],
-      "required": [
-        "pay_id"
-      ],
-      "upstream": "thu-info-lib/src/lib/sports.ts"
-    },
-    {
-      "description": "Create Alipay QR payment handoff for an existing reservation; does not pay",
-      "mutating": true,
-      "name": "sports.payment-qr",
-      "optional": [
-        "receipt_title"
-      ],
-      "required": [
-        "pay_id"
-      ],
-      "upstream": "thu-info-lib/src/lib/sports.ts"
+      "upstream": "sports.tsinghua.edu.cn/venue"
     },
     {
       "description": "Current card service account",

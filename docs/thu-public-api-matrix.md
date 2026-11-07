@@ -120,13 +120,13 @@ Counts: Local utility / state: 16, Unsupported: 5, Authentication: 8, Callable s
 | `getQueueInfo` | Callable service | `course.queue` | Native endpoint/protocol port; output schema may differ; live behavior unverified. |
 | `cancelCoursePF` | Callable service | `course.pf-cancel` | Native endpoint/protocol port; output schema may differ; live behavior unverified. |
 | `setCoursePF` | Callable service | `course.pf-set` | Native endpoint/protocol port; output schema may differ; live behavior unverified. |
-| `getSportsResources` | Callable service | `sports.resources` | Native endpoint/protocol port; output schema may differ; live behavior unverified. |
-| `updateSportsPhoneNumber` | Callable service | `sports.phone-update` | Native endpoint/protocol port; output schema may differ; live behavior unverified. |
-| `getSportsCaptchaUrl` | Callable service | `sports.captcha` | Native endpoint/protocol port; output schema may differ; live behavior unverified. |
-| `makeSportsReservation` | Callable service | `sports.book + sports.payment-qr` | Order creation and QR payment initialization are separate explicit actions. |
-| `getSportsReservationRecords` | Callable service | `sports.records` | Native endpoint/protocol port; output schema may differ; live behavior unverified. |
-| `paySportsReservation` | Callable service | `sports.payment-qr` | Native endpoint/protocol port; output schema may differ; live behavior unverified. |
-| `unsubscribeSportsReservation` | Callable service | `sports.cancel` | Native endpoint/protocol port; output schema may differ; live behavior unverified. |
+| `getSportsResources` | Current-platform equivalent | `sports.scenes + sports.availability` | The retired gymbook protocol was replaced by `sports.tsinghua.edu.cn` normalized discovery and availability. |
+| `updateSportsPhoneNumber` | Current-platform equivalent | `—` | No direct current-platform operation is exposed; do not reuse the retired endpoint. |
+| `getSportsCaptchaUrl` | Current-platform behavior | `sports.preflight` | Preflight reports whether the current platform requires its configured human verification. |
+| `makeSportsReservation` | Current-platform equivalent | `sports.preflight + sports.book` | Booking is a guarded write, revalidates availability, and never completes payment. |
+| `getSportsReservationRecords` | Current-platform equivalent | `sports.records` | Live-tested normalized reservation and order summary with member identity fields removed. |
+| `paySportsReservation` | Current-platform behavior | `—` | The CLI does not complete payment; use the official order page and explicit user action. |
+| `unsubscribeSportsReservation` | Current-platform equivalent | `sports.cancel` | Requires the exact current-platform reservation UUID. |
 | `getGitNamespaces` | Callable service | `gitlab.namespaces` | Native endpoint/protocol port; output schema may differ; live behavior unverified. |
 | `getGitRecentProjects` | Callable service | `gitlab.recent` | Native endpoint/protocol port; output schema may differ; live behavior unverified. |
 | `getGitOwnedProjects` | Callable service | `gitlab.personal` | Native endpoint/protocol port; output schema may differ; live behavior unverified. |

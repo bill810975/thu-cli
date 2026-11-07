@@ -283,6 +283,15 @@ async fn identity_response(
     }
     Ok(response)
 }
+pub(crate) async fn destination_login(
+    client: &Client,
+    entry: &str,
+    options: &LoginOptions,
+) -> Result<String> {
+    let response = identity_response(client, entry, false, Some(options)).await?;
+    check_success(&response)?;
+    anchor(&response)
+}
 fn read_line(prompt: &str) -> Result<String> {
     use std::io::{self, Write};
     eprint!("{prompt}");
@@ -577,8 +586,19 @@ pub async fn roam(client: &Client, options: &RoamOptions) -> Result<String> {
             check_success(&response)?;
             get(client, trusted_target(&anchor(&response)?)?.as_str()).await
         }
-        "default" => default_roam(client, &options.payload).await,
+        "default" => default_roam(client, &options.payload, None).await,
         _ => bail!("unknown roaming policy"),
+    }
+}
+pub async fn roam_with_csrf(
+    client: &Client,
+    options: &RoamOptions,
+    csrf: Option<&str>,
+) -> Result<String> {
+    if options.policy == "default" {
+        default_roam(client, &options.payload, csrf).await
+    } else {
+        roam(client, options).await
     }
 }
 async fn cab_login(client: &Client, credentials: Option<&LoginOptions>) -> Result<String> {
@@ -621,15 +641,22 @@ async fn cab_login(client: &Client, credentials: Option<&LoginOptions>) -> Resul
     }
     Ok(user)
 }
-async fn default_roam(client: &Client, payload: &str) -> Result<String> {
-    let cookies = get(client, INFO_COOKIE).await?;
-    let csrf = Regex::new(r"XSRF-TOKEN=([^;]+)")?
-        .captures(&cookies)
-        .and_then(|c| c.get(1))
-        .map(|m| m.as_str().to_owned())
-        .ok_or_else(|| {
-            anyhow!("information-portal CSRF cookie missing; auth login --service info first")
-        })?;
+async fn default_roam(client: &Client, payload: &str, csrf: Option<&str>) -> Result<String> {
+    let csrf = match csrf {
+        Some(csrf) => csrf.to_owned(),
+        None => {
+            let cookies = get(client, INFO_COOKIE).await?;
+            Regex::new(r"XSRF-TOKEN=([^;]+)")?
+                .captures(&cookies)
+                .and_then(|c| c.get(1))
+                .map(|m| m.as_str().to_owned())
+                .ok_or_else(|| {
+                    anyhow!(
+                        "information-portal CSRF cookie missing; auth login --service info first"
+                    )
+                })?
+        }
+    };
     let mut url = Url::parse(INFO_ROAM)?;
     url.query_pairs_mut()
         .append_pair("yyfwid", payload)

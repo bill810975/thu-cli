@@ -6,7 +6,7 @@ These repositories are primarily clients and protocol libraries for campus syste
 
 The exact generated operation catalog is `operations.json` and can always be reproduced with `thu-cli services`. Each operation includes its mutation classification and required/optional argument names. This is not a claim that each upstream mobile return model is reproduced byte-for-byte.
 
-- THU Info: academic records, teaching assessment, available classrooms, calendar and custom schedules, course registration/query/drop/PF/priority, library seats/rooms, sports booking/payment QR, campus card, dorm electricity, income/invoices, news, network devices, campus GitLab, THOS, campus mail, model token/chat, app feedback/announcements, server-side passkey/device management.
+- THU Info: academic records, teaching assessment, available classrooms, calendar and custom schedules, course registration/query/drop/PF/priority, library seats/rooms, current sports venue discovery/availability/preflight/booking/records/cancellation, campus card, dorm electricity, income/invoices, news, network devices, campus GitLab, THOS, campus mail, model token/chat, app feedback/announcements, server-side passkey/device management.
 - Online reimbursement: on-demand Info-to-wsbx SSO, local receipt OCR and
   verification, exact-deduplicated wallet insertion, witness assignment,
   project and item discovery, route-aware electronic-invoice binding,
@@ -27,6 +27,9 @@ Native HTTP requests, forms, encryption, parsers, cookie lifecycles and error
 branches have unit/mock coverage. One live account and campus network have also
 been tested for direct Info and Learn authentication, persistent session
 refresh, Info news reads, Learn semester/course reads and homework reads.
+Current sports SSO, scene/area discovery, availability, payment-channel reads,
+reservation records and exact-slot booking preflight have also been tested live.
+No live sports reservation or payment was created during this verification.
 
 That evidence does not establish every authorization role, enrollment quota,
 MFA/CAPTCHA mode, write operation or production response. Untested functionality

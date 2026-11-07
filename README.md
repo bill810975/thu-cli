@@ -37,8 +37,9 @@ For an agent-driven installation, give an agent the prompt in
   daemon required.
 - Hidden password input, SM2 encryption, MFA, and an optional mode-600 local
   JSON credential for unattended renewal.
-- Campus news search, courses, homework, schedules, calendar, library, sports,
-  card, network, mail, invoices, THOS, GitLab, and other service operations.
+- Campus news search, courses, homework, schedules, calendar, library, current
+  sports-venue discovery/booking, card, network, mail, invoices, THOS, GitLab,
+  and other service operations.
 - Reimbursement drafts for daily (`052`), smart/foreign-invoice (`051`),
   domestic travel (`06`), conference (`19`), and international travel (`1206`),
   including local receipt OCR/verification and wallet insertion,
@@ -54,6 +55,10 @@ Live read-only Info and Learn authentication and session refresh have been
 tested. Write operations, account-specific entitlements, CAPTCHA flows, and
 every campus service remain subject to the boundaries in
 [docs/COVERAGE.md](docs/COVERAGE.md).
+
+The current `sports.tsinghua.edu.cn` venue system has live-tested SSO, scene,
+availability, payment-channel, record, and booking-preflight reads. Booking
+creation remains a separately confirmed mutation and never completes payment.
 
 The daily reimbursement client has also been checked against a live account
 through local receipt OCR/verification, wallet insertion, witness assignment,
@@ -207,6 +212,25 @@ thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
 thu-cli --compact --session "$HOME/.config/thu-cli/learn.json" \
   learn semesters
 ```
+
+Sports venue discovery and booking preflight:
+
+```sh
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu sports.scenes --args '{"query":"网球"}'
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu sports.availability \
+  --args '{"scene_uuid":"SCENE_UUID","date":"2026-11-12"}'
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu sports.preflight \
+  --args '{"scene_uuid":"SCENE_UUID","site_uuid":"SITE_UUID","start":"2026-11-12 18:00","end":"2026-11-12 19:00","pay_type":"PAY_ONLINE"}'
+```
+
+Repeat `sports.preflight` with `--confirm` as `sports.book` only after explicit
+confirmation of the exact court, date, time, and payment mode. See
+[docs/reservations.md](docs/reservations.md).
 
 Daily reimbursement discovery and a safe read-only start:
 

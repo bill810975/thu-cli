@@ -397,7 +397,8 @@ impl Session {
             .clear();
         self.save()?;
         self.clear_profile()?;
-        self.remove_private_sidecar("wsbx-auth")
+        self.remove_private_sidecar("wsbx-auth")?;
+        self.remove_private_sidecar("sports-auth")
     }
 }
 

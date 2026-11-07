@@ -36,8 +36,8 @@ agent。
 - 只读调用遇到失效会话时按需自动续期，不需要后台常驻进程。
 - 隐藏密码输入、SM2 加密、多因素认证，以及用于无人值守续期的本地
   mode-600 JSON 凭据。
-- 支持校园新闻、课程、作业、课表、日历、图书馆、体育、一卡通、网络、
-  邮箱、发票、THOS、GitLab 等服务。
+- 支持校园新闻、课程、作业、课表、日历、图书馆、当前体育场馆的查询与预约、
+  一卡通、网络、邮箱、发票、THOS、GitLab 等服务。
 - 支持日常报销（`052`）、智能/境外票据（`051`）、境内差旅（`06`）、
   会议（`19`）和境外差旅（`1206`）草稿，包括各路由的报销事项、
   本地票据 OCR 与验真、票夹入库、同人验收人、电子发票、附件、支付信息、
@@ -49,6 +49,10 @@ agent。
 只读的 Info 和 Learn 登录、会话续期已做过真实环境测试。写操作、账号具体
 权限、验证码流程以及其余校园服务的覆盖范围与限制，以
 [docs/COVERAGE.md](docs/COVERAGE.md) 为准。
+
+当前 `sports.tsinghua.edu.cn` 场馆系统的 SSO、场馆、可用时段、支付渠道、
+历史记录和预约预检已做过只读实测。创建预约仍是需要单独确认的写操作，并且
+CLI 不会自动完成支付。
 
 日常报销客户端还使用真实账号完成了本地票据 OCR 与验真、票夹入库、验收人、
 发票绑定、项目绑定和草稿暂存验证。智能/境外票据、境内差旅、会议和境外
@@ -198,6 +202,25 @@ thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
 thu-cli --compact --session "$HOME/.config/thu-cli/learn.json" \
   learn semesters
 ```
+
+体育场馆查询与预约预检：
+
+```sh
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu sports.scenes --args '{"query":"网球"}'
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu sports.availability \
+  --args '{"scene_uuid":"SCENE_UUID","date":"2026-11-12"}'
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu sports.preflight \
+  --args '{"scene_uuid":"SCENE_UUID","site_uuid":"SITE_UUID","start":"2026-11-12 18:00","end":"2026-11-12 19:00","pay_type":"PAY_ONLINE"}'
+```
+
+确认具体场地、日期、时间和支付方式后，把 `sports.preflight` 换成
+`sports.book` 并加 `--confirm`。详见
+[docs/reservations.md](docs/reservations.md)。
 
 日常报销的只读入口：
 

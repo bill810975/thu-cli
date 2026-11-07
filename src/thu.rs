@@ -663,6 +663,18 @@ op("thos.services",false,"THOS service catalogue",&[],&["page","size","keyword"]
     a.extend(
         crate::thu_reservations::operations()
             .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|operation| {
+                operation["name"]
+                    .as_str()
+                    .is_none_or(|name| !name.starts_with("sports."))
+            })
+            .cloned(),
+    );
+    a.extend(
+        crate::thu_sports::operations()
+            .as_array()
             .cloned()
             .unwrap_or_default(),
     );
@@ -701,8 +713,6 @@ pub fn roaming(operation: &str, a: &Value) -> Option<(&'static str, String)> {
             "id",
             "ef84f6d6784f6b834e5214f432d6173f/0?/api/id_tsinghua_callback",
         )
-    } else if operation.starts_with("sports.") {
-        ("default", "5539ECF8CD815C7D3F5A8EE0A2D72441")
     } else if operation.starts_with("card.") {
         ("card", "eea30cbedcaf97c69d28b2d92f22a259/0?/userindex")
     } else if operation.starts_with("gitlab.") {
@@ -757,8 +767,11 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
     if operation.starts_with("passkey.") || operation.starts_with("device.") {
         return crate::auth::manage(c, operation, a).await;
     }
-    if operation.starts_with("library.") || operation.starts_with("sports.") {
+    if operation.starts_with("library.") {
         return crate::thu_reservations::execute(c, operation, a).await;
+    }
+    if operation.starts_with("sports.") {
+        return crate::thu_sports::execute(session, operation, a).await;
     }
     if operation.starts_with("card.") {
         return crate::thu_card::execute(c, operation, a).await;

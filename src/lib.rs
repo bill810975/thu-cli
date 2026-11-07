@@ -7,4 +7,5 @@ pub mod session;
 pub mod thu;
 pub mod thu_card;
 pub mod thu_reservations;
+pub mod thu_sports;
 pub mod wsbx;

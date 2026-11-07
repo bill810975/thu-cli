@@ -166,6 +166,55 @@ For other campus services, inspect the catalog first. Prefixes currently cover
 `network`, `program`, `assessment`, `classroom`, `dorm`, `invoice`, `thos`, and
 `gitlab`, plus the `wsbx` reimbursement workflow.
 
+## Sports Venue Booking
+
+The retired `50.tsinghua.edu.cn/gymbook` service is not used. Current sports
+reservations run through `https://www.sports.tsinghua.edu.cn/venue/` with an
+on-demand SSO token exchange. The platform token remains in the private
+mode-600 `sports-auth` sidecar; never print or copy it.
+
+Start with reads:
+
+```sh
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu sports.auth-status
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu sports.scenes --args '{"query":"网球"}'
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu sports.availability \
+  --args '{"scene_uuid":"SCENE_UUID","date":"2026-11-12"}'
+```
+
+`sports.availability` defaults to bookable sessions only and returns normalized
+court/session UUIDs, start/end times, price, capacity, and payment metadata.
+Use `sports.areas` and `sports.site-types` when a scene has multiple buildings,
+rooms, device kinds, or site kinds. Availability can be scoped with
+`class_type_uuid`, `class_type_enum`, `dev_kind_uuid`, or `site_kind_id`.
+
+Before any reservation, run `sports.preflight` for the exact site and time:
+
+```sh
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu sports.preflight \
+  --args '{"scene_uuid":"SCENE_UUID","site_uuid":"SITE_UUID","start":"2026-11-12 18:00","end":"2026-11-12 19:00","pay_type":"PAY_ONLINE"}'
+```
+
+Review the returned court, location, date/time, price, payment mode, form type,
+approval needs, and captcha requirement with the user. Do not guess a court,
+time, member list, approver, form value, or payment mode. After the user
+explicitly confirms those exact details, change `sports.preflight` to
+`sports.book` and add `--confirm`.
+
+`sports.book` revalidates that both the site and exact session are currently
+bookable, obtains a short lock, creates one reservation, and checks the order.
+It never completes payment and never retries an ambiguous write. If the result
+is unclear, inspect `sports.records` before retrying. Continue payment only on
+the official venue/order page and only within the displayed hold deadline.
+Cancellation requires the exact reservation UUID from `sports.records` and an
+explicit user request.
+
 ## Online Reimbursement
 
 The `wsbx.*` operations use the authenticated Info profile to acquire a wsbx SSO

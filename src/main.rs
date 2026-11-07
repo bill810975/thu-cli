@@ -284,13 +284,15 @@ async fn roam_for_call(session: &Session, call: &Call, policy: &str, payload: &s
     } else {
         None
     };
-    auth::roam(
+    let csrf = session.cookie_value("info.tsinghua.edu.cn", "XSRF-TOKEN")?;
+    auth::roam_with_csrf(
         &session.auth_client,
         &auth::RoamOptions {
             policy: policy.to_owned(),
             payload: payload.to_owned(),
             credentials,
         },
+        csrf.as_deref(),
     )
     .await
     .map(|_| ())
@@ -444,6 +446,7 @@ async fn run(cli: &Cli) -> Result<Value> {
             let count = session.import_netscape(file)?;
             session.clear_profile()?;
             session.remove_private_sidecar("wsbx-auth")?;
+            session.remove_private_sidecar("sports-auth")?;
             Ok(json!({"imported_cookies":count}))
         }
         Command::Logout { confirm } => {
@@ -560,13 +563,15 @@ async fn run(cli: &Cli) -> Result<Value> {
             } else {
                 None
             };
-            auth::roam(
+            let csrf = session.cookie_value("info.tsinghua.edu.cn", "XSRF-TOKEN")?;
+            auth::roam_with_csrf(
                 &session.auth_client,
                 &auth::RoamOptions {
                     policy: policy.clone(),
                     payload: payload.clone(),
                     credentials,
                 },
+                csrf.as_deref(),
             )
             .await
             .map(|_| json!({"roaming_completed":true,"policy":policy}))

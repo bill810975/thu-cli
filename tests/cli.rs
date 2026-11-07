@@ -133,6 +133,34 @@ fn receipt_wallet_add_dry_run_is_offline() {
 }
 
 #[test]
+fn sports_booking_requires_confirmation_and_dry_run_is_offline() {
+    let d = tempfile::tempdir().unwrap();
+    let s = d.path().join("cookies.json");
+    let args = r#"{"scene_uuid":"fixture-scene","site_uuid":"fixture-site","start":"2099-01-01 18:00","end":"2099-01-01 19:00","pay_type":"PAY_ONLINE"}"#;
+    let o = cli()
+        .arg("--session")
+        .arg(&s)
+        .args(["thu", "sports.book", "--args", args])
+        .output()
+        .unwrap();
+    assert!(!o.status.success());
+    assert!(!s.exists());
+    assert!(String::from_utf8_lossy(&o.stderr).contains("--confirm"));
+
+    let o = cli()
+        .arg("--session")
+        .arg(&s)
+        .args(["thu", "sports.book", "--args", args, "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    assert!(!s.exists());
+    let v: Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["network_request_sent"], false);
+    assert_eq!(v["operation"]["mutating"], true);
+}
+
+#[test]
 fn reimbursement_route_catalog_is_available_offline() {
     let d = tempfile::tempdir().unwrap();
     let s = d.path().join("cookies.json");

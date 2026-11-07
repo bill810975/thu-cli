@@ -60,13 +60,16 @@ async fn body(r: reqwest::RequestBuilder) -> Result<String> {
         String::from_utf8(bytes.to_vec())
             .unwrap_or_else(|_| encoding_rs::GBK.decode(&bytes).0.into_owned())
     };
-    if decoded.contains("/do/off/ui/auth/login/form/")
-        || decoded.contains("用户登陆超时")
-        || decoded.contains("找回密码")
-    {
+    if is_auth_page(&decoded) {
         bail!("service session expired or not authenticated; establish the service session first");
     }
     Ok(decoded)
+}
+fn is_auth_page(s: &str) -> bool {
+    s.contains("/do/off/ui/auth/login/form/")
+        || s.contains("/do/off/ui/auth/login/check")
+        || s.contains("用户登陆超时")
+        || s.contains("找回密码")
 }
 async fn get(c: &Client, url: &str) -> Result<String> {
     body(c.get(url)).await
@@ -739,6 +742,14 @@ mod tests {
             "abc123"
         );
         assert!(parse_token("login page").is_err());
+    }
+    #[test]
+    fn recognizes_service_auth_pages() {
+        assert!(is_auth_page(
+            "<form action=\"/do/off/ui/auth/login/checkSingle\">"
+        ));
+        assert!(is_auth_page("用户登陆超时"));
+        assert!(!is_auth_page("var resourceArray = [];"));
     }
     #[test]
     fn resource_parser() {
