@@ -37,9 +37,10 @@ For an agent-driven installation, give an agent the prompt in
   daemon required.
 - Hidden password input, SM2 encryption, MFA, and an optional mode-600 local
   JSON credential for unattended renewal.
-- Campus news search, courses, homework, schedules, calendar, library, current
-  sports-venue discovery/booking, card, network, mail, invoices, THOS, GitLab,
-  and other service operations.
+- Campus news search, undergraduate/graduate course registration, course
+  search/selection/drop/volunteer/PF operations, timetables, calendar, library,
+  current sports-venue discovery/booking, card, network, mail, invoices, THOS,
+  GitLab, and other service operations.
 - Reimbursement drafts for daily (`052`), smart/foreign-invoice (`051`),
   domestic travel (`06`), conference (`19`), and international travel (`1206`),
   including local receipt OCR/verification and wallet insertion,

@@ -123,25 +123,30 @@ const LIBRARY_BOOK_RECORD_URL: &str = "https://webvpn.tsinghua.edu.cn/https/7772
 const CANCEL_BOOKING_URL: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421e3f24088693c6152301c9aa596522b204c02212b859d0a19/api.php/profile/books/";
 const PHYSICAL_EXAM_URL: &str = "https://webvpn.tsinghua.edu.cn/http/77726476706e69737468656265737421eaff4b8b69336153301c9aa596522b20bc86e6e559a9b290/tyjx.tyjx_tc_xscjb.do?m=jsonCj";
 const CR_TIMETABLE_URL: &str = "https://webvpn.tsinghua.edu.cn/http/77726476706e69737468656265737421f1f94f93323e6b55300b80afd641303c054d0551650ca167136885bf/sites/default/files/%E9%80%89%E8%AF%BE%E6%97%B6%E9%97%B4%E5%AE%89%E6%8E%92.htm";
-const CR_CAPTCHA_URL: &str = "https://webvpn.tsinghua.edu.cn/http/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/login-jcaptcah.jpg?vpn-1&captchaflag=login1";
+const CR_CAPTCHA_URL: &str =
+    "https://zhjwxk.cic.tsinghua.edu.cn/login-jcaptcah.jpg?vpn-1&captchaflag=login1";
 const ACADEMIC_LOGIN_URL: &str = "https://webvpn.tsinghua.edu.cn/http/77726476706e69737468656265737421f1f44098223d6153301c9aa596522b2027124ec39c5debe6/Login";
 const ACADEMIC_ROOT_URL: &str = "https://webvpn.tsinghua.edu.cn/http-80/77726476706e69737468656265737421f1f44098223d6153301c9aa596522b2027124ec39c5debe6/render.userLayoutRootNode.uP";
 const KCXX_BKS_URL: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421f9f9479369247b59700f81b9991b2631506205de/f/info/gxfw_fg/common/cardRoaming/KCXX_BKS";
 const KCXX_YJS_URL: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421f9f9479369247b59700f81b9991b2631506205de/f/info/gxfw_fg/common/cardRoaming/KCXX_YJS";
-const CR_LOGIN_HOME_URL: &str = "https://webvpn.tsinghua.edu.cn/http/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/xklogin.do";
-const CR_LOGIN_SUBMIT_URL: &str = "https://webvpn.tsinghua.edu.cn/https-443/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/j_acegi_formlogin_xsxk.do";
-const CR_SEARCH_URL: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/xkBks.vxkBksJxjhBs.do";
-const CR_ZYTJB_URL: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/xkBks.xkBksZytjb.do";
-const COURSE_PLAN_URL_PREFIX: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/jhBks.vjhBksPyfakcbBs.do?m=showBksZxZdxjxjhXmxqkclist&pathContent=%B1%BE%D1%A7%C6%DA%BD%CC%D1%A7%BC%C6%BB%AE&p_xnxq=";
-const CR_MAIN_URL: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/xkBks.vxkBksXkbBs.do?m=main";
-const CR_TREE_URL: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/xkBks.vxkBksXkbBs.do?m=showTree&p_xnxq=";
-const CR_SELECT_URL: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/xkBks.vxkBksXkbBs.do";
-const CR_SEARCH_YJS_URL: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/xkYjs.vxkYjsJxjhBs.do";
-const CR_ZYTJB_YJS_URL: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/xkYjs.xkYjsZytjb.do";
-const COURSE_PLAN_YJS_URL: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/jhYjs.vjhYjsGrpyfab.do";
-const CR_MAIN_YJS_URL: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/xkYjs.vxkYjsXkbBs.do?m=main";
-const CR_TREE_YJS_URL: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/xkYjs.vxkYjsXkbBs.do?m=showTree&p_xnxq=";
-const CR_SELECT_YJS_URL: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/xkYjs.vxkYjsXkbBs.do";
+const CR_LOGIN_HOME_URL: &str =
+    "https://zhjwxk.cic.tsinghua.edu.cn/xklogin.do?UIDisplayLanguage=zh_CN";
+const CR_SEARCH_URL: &str = "https://zhjwxk.cic.tsinghua.edu.cn/xkBks.vxkBksJxjhBs.do";
+const CR_ZYTJB_URL: &str = "https://zhjwxk.cic.tsinghua.edu.cn/xkBks.xkBksZytjb.do";
+const COURSE_PLAN_URL_PREFIX: &str = "https://zhjwxk.cic.tsinghua.edu.cn/jhBks.vjhBksPyfakcbBs.do?m=showBksZxZdxjxjhXmxqkclist&pathContent=%B1%BE%D1%A7%C6%DA%BD%CC%D1%A7%BC%C6%BB%AE&p_xnxq=";
+const CR_MAIN_URL: &str = "https://zhjwxk.cic.tsinghua.edu.cn/xkBks.vxkBksXkbBs.do?m=main";
+const CR_TREE_URL: &str =
+    "https://zhjwxk.cic.tsinghua.edu.cn/xkBks.vxkBksXkbBs.do?m=showTree&p_xnxq=";
+const CR_SELECT_URL: &str = "https://zhjwxk.cic.tsinghua.edu.cn/xkBks.vxkBksXkbBs.do";
+const CR_COURSE_DETAIL_URL: &str = "https://zhjwxk.cic.tsinghua.edu.cn/js.vjsKcbBs.do";
+const CR_WHOLE_TIMETABLE_URL: &str = "https://zhjwxk.cic.tsinghua.edu.cn/syxk.vsyxkKcapb.do";
+const CR_SEARCH_YJS_URL: &str = "https://zhjwxk.cic.tsinghua.edu.cn/xkYjs.vxkYjsJxjhBs.do";
+const CR_ZYTJB_YJS_URL: &str = "https://zhjwxk.cic.tsinghua.edu.cn/xkYjs.xkYjsZytjb.do";
+const COURSE_PLAN_YJS_URL: &str = "https://zhjwxk.cic.tsinghua.edu.cn/jhYjs.vjhYjsGrpyfab.do";
+const CR_MAIN_YJS_URL: &str = "https://zhjwxk.cic.tsinghua.edu.cn/xkYjs.vxkYjsXkbBs.do?m=main";
+const CR_TREE_YJS_URL: &str =
+    "https://zhjwxk.cic.tsinghua.edu.cn/xkYjs.vxkYjsXkbBs.do?m=showTree&p_xnxq=";
+const CR_SELECT_YJS_URL: &str = "https://zhjwxk.cic.tsinghua.edu.cn/xkYjs.vxkYjsXkbBs.do";
 const SPORTS_BASE_URL: &str = "https://webvpn.tsinghua.edu.cn/http/77726476706e69737468656265737421a5a70f8834396657761d88e29d51367b6a00/gymbook/gymBookAction.do?ms=viewGymBook&viewType=m";
 const SPORTS_DETAIL_URL: &str = "https://webvpn.tsinghua.edu.cn/http/77726476706e69737468656265737421a5a70f8834396657761d88e29d51367b6a00/gymsite/cacheAction.do?ms=viewBook&userType=1";
 const SPORTS_UNPAID_URL: &str = "https://webvpn.tsinghua.edu.cn/http/77726476706e69737468656265737421a5a70f8834396657761d88e29d51367b6a00/pay/payAction.do?ms=getOrdersForNopay";
@@ -273,6 +278,8 @@ async fn body(r: reqwest::Response) -> Result<String> {
     if text.contains("needCaptcha")
         || text.contains("用户登陆超时或访问内容不存在")
         || text.contains("<title>清华大学WebVPN</title>")
+        || text.contains("do/off/ui/auth/login")
+        || text.contains("sm2publicKey")
     {
         bail!("Session expired or captcha required; refresh login/session before retrying");
     }
@@ -357,6 +364,19 @@ fn message(html: &str) -> Result<Value> {
 fn field_value(row: &[String], n: usize) -> Value {
     row.get(n).map(|x| json!(x)).unwrap_or(Value::Null)
 }
+fn normalized_sequence(value: &Value) -> String {
+    let text = match value {
+        Value::String(value) => value.clone(),
+        Value::Number(value) => value.to_string(),
+        _ => String::new(),
+    };
+    let normalized = text.trim_start_matches('0').to_owned();
+    if normalized.is_empty() {
+        "0".to_owned()
+    } else {
+        normalized
+    }
+}
 fn named_rows(html: &str, selector: &str, fields: &[(usize, &str)]) -> Value {
     json!(Html::parse_document(html)
         .select(&sel(selector))
@@ -370,6 +390,342 @@ fn named_rows(html: &str, selector: &str, fields: &[(usize, &str)]) -> Value {
         })
         .collect::<Vec<_>>())
 }
+
+fn course_catalog_rows(html: &str) -> Value {
+    let teacher_re = Regex::new(r"p_jsh=([^&]+)").expect("static p_jsh regex");
+    json!(Html::parse_document(html)
+        .select(&sel("tr.trr2"))
+        .map(|row| {
+            let t = cells(row);
+            let teacher_href = row
+                .select(&sel("a[href*='showJsDetail']"))
+                .next()
+                .and_then(|link| link.value().attr("href"))
+                .unwrap_or("");
+            let detail_url = row
+                .select(&sel("a[href*='showToXs']"))
+                .next()
+                .and_then(|link| link.value().attr("href"))
+                .unwrap_or("");
+            let teacher_id = teacher_re
+                .captures(teacher_href)
+                .and_then(|capture| capture.get(1))
+                .map(|capture| capture.as_str())
+                .unwrap_or("");
+            json!({
+                "department": field_value(&t, 0),
+                "id": field_value(&t, 1),
+                "seq": field_value(&t, 2),
+                "name": field_value(&t, 3),
+                "credits": field_value(&t, 4),
+                "teacher": field_value(&t, 5),
+                "teacherId": teacher_id,
+                "bksCapacity": field_value(&t, 6),
+                "bksRemaining": field_value(&t, 7),
+                "yjsCapacity": field_value(&t, 8),
+                "yjsRemaining": field_value(&t, 9),
+                "time": field_value(&t, 10),
+                "note": field_value(&t, 11),
+                "feature": field_value(&t, 12),
+                "year": field_value(&t, 13),
+                "secondary": field_value(&t, 14),
+                "reUseCap": field_value(&t, 16),
+                "restrict": field_value(&t, 17),
+                "culture": field_value(&t, 18),
+                "detailUrl": detail_url
+            })
+        })
+        .collect::<Vec<_>>())
+}
+
+fn course_level_rows(html: &str) -> Value {
+    let code_re = Regex::new(r"^[A-Za-z0-9]+$").expect("static course code regex");
+    json!(Html::parse_document(html)
+        .select(&sel("tr.trr2"))
+        .filter_map(|row| {
+            let values = cells(row);
+            let code_index = values.iter().position(|value| {
+                value.len() >= 6
+                    && value.chars().any(|character| character.is_ascii_digit())
+                    && code_re.is_match(value)
+            })?;
+            let id = values.get(code_index)?;
+            let seq = values
+                .get(code_index + 1)
+                .map(|value| value.trim_start_matches('0'))
+                .filter(|value| !value.is_empty())
+                .unwrap_or("0");
+            let property = values.get(code_index + 2).cloned().unwrap_or_default();
+            let (type_code, type_label) = match property.as_str() {
+                "必修" => ("006", "必修"),
+                "限选" => ("008", "限选"),
+                "任选" => ("007", "任选"),
+                _ => ("ty", "体育"),
+            };
+            Some(json!({
+                "id": id,
+                "seq": seq,
+                "property": property,
+                "typeCode": type_code,
+                "typeLabel": type_label
+            }))
+        })
+        .collect::<Vec<_>>())
+}
+
+fn selected_course_rows(html: &str) -> Result<Value> {
+    use std::collections::BTreeMap;
+
+    let allocation_re = Regex::new(
+        r#"(?s)\[\s*"(\d+),(\d+)"\s*,\s*"(\d+)"\s*,\s*"(\d+)"\s*,\s*"([^"]*)"\s*,\s*"[^"]*"\s*\]"#,
+    )?;
+    let mut allocations = BTreeMap::new();
+    for capture in allocation_re.captures_iter(html) {
+        let code = capture.get(1).map(|value| value.as_str()).unwrap_or("");
+        let seq = capture.get(2).map(|value| value.as_str()).unwrap_or("");
+        let will = capture.get(3).map(|value| value.as_str()).unwrap_or("");
+        let type_code = capture.get(4).map(|value| value.as_str()).unwrap_or("");
+        let sports = capture.get(5).map(|value| value.as_str()).unwrap_or("");
+        allocations.insert(
+            format!("{code}_{seq}"),
+            (will.to_owned(), type_code.to_owned(), sports.to_owned()),
+        );
+    }
+
+    let code_re = Regex::new(r"^[A-Za-z0-9]+$")?;
+    let mut rows = Vec::new();
+    for row in Html::parse_document(html).select(&sel("tr.trr2")) {
+        let delete_id = row
+            .select(&sel("input[name='p_del_id']"))
+            .find_map(|input| input.value().attr("value"))
+            .unwrap_or("");
+        let id_parts = delete_id.split(';').collect::<Vec<_>>();
+        let values = cells(row);
+        let mut id = id_parts.get(1).copied().unwrap_or("").to_owned();
+        let mut seq = id_parts.get(2).copied().unwrap_or("").to_owned();
+        let code_index = values.iter().position(|value| {
+            value.len() >= 6
+                && value.chars().any(|character| character.is_ascii_digit())
+                && code_re.is_match(value)
+        });
+        let current_layout = code_index.is_some_and(|index| {
+            values.get(index + 1).is_some_and(|value| {
+                !value.is_empty() && value.chars().all(|character| character.is_ascii_digit())
+            })
+        });
+        if let Some(index) = code_index {
+            id = values[index].clone();
+            seq = values.get(index + 1).cloned().unwrap_or_default();
+            if !current_layout {
+                seq = values.get(index + 2).cloned().unwrap_or_default();
+            }
+        }
+        if id.is_empty() {
+            continue;
+        }
+        let normalized_seq = seq.trim_start_matches('0');
+        let allocation = allocations.get(&format!("{id}_{seq}")).or_else(|| {
+            allocations
+                .iter()
+                .find(|(key, _)| {
+                    key.split_once('_').is_some_and(|(code, candidate_seq)| {
+                        code == id && candidate_seq.trim_start_matches('0') == normalized_seq
+                    })
+                })
+                .map(|(_, value)| value)
+        });
+        let will_label = allocation
+            .map(|value| match value.0.as_str() {
+                "1" => "第一志愿",
+                "2" => "第二志愿",
+                "3" => "第三志愿",
+                _ => "",
+            })
+            .filter(|value| !value.is_empty())
+            .or_else(|| {
+                values
+                    .iter()
+                    .find(|value| value.contains("志愿"))
+                    .map(String::as_str)
+            })
+            .unwrap_or("");
+        let will = allocation
+            .and_then(|value| value.0.parse::<u64>().ok())
+            .or(match will_label {
+                "第一志愿" => Some(1),
+                "第二志愿" => Some(2),
+                "第三志愿" => Some(3),
+                _ => None,
+            });
+        let type_code = allocation
+            .map(|value| value.1.as_str())
+            .or_else(|| {
+                code_index
+                    .and_then(|index| index.checked_sub(1))
+                    .and_then(|index| values.get(index))
+                    .map(String::as_str)
+            })
+            .unwrap_or("");
+        let is_sports =
+            allocation.is_some_and(|value| value.2 == "是") || type_code.contains("体育");
+        let type_label = if is_sports {
+            "体育"
+        } else {
+            match type_code {
+                "006" => "必修",
+                "008" => "限选",
+                "007" => "任选",
+                "必修" => "必修",
+                "限选" => "限选",
+                "任选" => "任选",
+                _ => "",
+            }
+        };
+        let field = |offset: usize| {
+            code_index
+                .and_then(|index| index.checked_add(offset))
+                .and_then(|index| values.get(index))
+                .cloned()
+                .unwrap_or_default()
+        };
+        let name = field(if current_layout { 2 } else { 1 });
+        let time = field(3);
+        let teacher = field(4);
+        let credit = field(5);
+        let secondary = field(6) == "是";
+        rows.push(json!({
+            "type": type_label,
+            "will": will,
+            "willLabel": will_label,
+            "id": id,
+            "name": name,
+            "seq": seq,
+            "time": time,
+            "teacher": teacher,
+            "credit": credit,
+            "secondary": secondary,
+            "cells": values
+        }));
+    }
+    Ok(json!(rows))
+}
+
+fn whole_timetable_rows(html: &str) -> Result<Value> {
+    use std::collections::BTreeMap;
+
+    let block_re =
+        Regex::new(r#"(?s)p_id=\d+;([A-Za-z0-9]+).{0,900}?getElementById\('a([1-6])_([1-7])'\)"#)?;
+    let name_re = Regex::new(r#"<b>([^<&"'\n]{1,60})</b>"#)?;
+    let part_re = Regex::new(r#"strHTML1\s*\+=\s*"；([^"]*)""#)?;
+    let mut by_code = BTreeMap::<String, Value>::new();
+    for capture in block_re.captures_iter(html) {
+        let Some(whole_match) = capture.get(0) else {
+            continue;
+        };
+        let code = capture.get(1).map(|value| value.as_str()).unwrap_or("");
+        let section = capture.get(2).map(|value| value.as_str()).unwrap_or("");
+        let day = capture.get(3).map(|value| value.as_str()).unwrap_or("");
+        let mut block_end = (whole_match.end() + 600).min(html.len());
+        while !html.is_char_boundary(block_end) {
+            block_end -= 1;
+        }
+        let block = &html[whole_match.start()..block_end];
+        let name = name_re
+            .captures(block)
+            .and_then(|capture| capture.get(1))
+            .map(|capture| capture.as_str().trim().to_owned())
+            .unwrap_or_default();
+        if code.is_empty() || name.is_empty() {
+            continue;
+        }
+        let parts = part_re
+            .captures_iter(block)
+            .filter_map(|capture| capture.get(1))
+            .map(|capture| capture.as_str().trim().to_owned())
+            .collect::<Vec<_>>();
+        let teacher = parts.first().cloned().unwrap_or_default();
+        let type_label = parts
+            .iter()
+            .skip(1)
+            .find(|value| matches!(value.as_str(), "必修" | "限选" | "任选" | "体育"))
+            .cloned()
+            .unwrap_or_default();
+        let weeks = parts
+            .iter()
+            .skip(1)
+            .find(|value| {
+                value.as_str() == "全周"
+                    || (value.contains('周') && value.contains(|c: char| c.is_ascii_digit()))
+            })
+            .cloned()
+            .unwrap_or_else(|| "全周".to_owned());
+        let slot = format!("{day}-{section}({weeks})");
+        by_code
+            .entry(code.to_owned())
+            .and_modify(|row| {
+                if let Some(slots) = row["slots"].as_array_mut() {
+                    slots.push(json!(slot));
+                }
+                if row["teacher"].as_str().unwrap_or("").is_empty() && !teacher.is_empty() {
+                    row["teacher"] = json!(teacher);
+                }
+                if row["type"].as_str().unwrap_or("").is_empty() && !type_label.is_empty() {
+                    row["type"] = json!(type_label);
+                }
+            })
+            .or_insert_with(|| {
+                json!({
+                    "id": code,
+                    "name": name,
+                    "teacher": teacher,
+                    "type": type_label,
+                    "slots": [slot]
+                })
+            });
+    }
+    let rows = by_code
+        .into_values()
+        .map(|mut row| {
+            let time = row["slots"]
+                .as_array()
+                .map(|slots| {
+                    slots
+                        .iter()
+                        .filter_map(Value::as_str)
+                        .collect::<Vec<_>>()
+                        .join(",")
+                })
+                .unwrap_or_default();
+            row["time"] = json!(time);
+            row
+        })
+        .collect::<Vec<_>>();
+    Ok(json!(rows))
+}
+
+fn course_detail_fields(html: &str) -> Value {
+    let mut fields = serde_json::Map::new();
+    for row in Html::parse_document(html).select(&sel("table.table-striped tr")) {
+        let values = cells(row);
+        for pair in values.chunks(2) {
+            let Some(label) = pair.first().filter(|value| !value.is_empty()) else {
+                continue;
+            };
+            if label == "课程名"
+                || label == "课程号"
+                || label.chars().all(|character| character.is_ascii_digit())
+            {
+                continue;
+            }
+            let Some(value) = pair.get(1).filter(|value| !value.is_empty()) else {
+                continue;
+            };
+            fields.insert(label.trim_end_matches('：').to_owned(), json!(value));
+        }
+    }
+    Value::Object(fields)
+}
+
 fn footer(html: &str) -> Value {
     let txt = Html::parse_document(html)
         .select(&sel("p.yeM"))
@@ -406,24 +762,27 @@ op("model.chat",true,"Send chat messages to campus MadModel and return response 
 op("info.model-token",false,"MadModel service access token (sensitive output)",&[],&[],"getMadModelToken"),
 op("mail.send",true,"Send school mail through Coremail",&["subject","content","recipient"],&[],"naiveSendMail"),
 op("dorm.recharge",true,"Create electricity recharge payment QR (does not complete payment)",&["amount"],&[],"getEleRechargePayCode"),
-op("course.captcha",false,"Fetch course-registration captcha as base64 for manual solving",&[],&[],"getCrCaptchaUrl"),
+op("course.captcha",false,"Legacy course-registration captcha fallback as base64; modern SSO does not request it",&[],&[],"getCrCaptchaUrl"),
 op("course.semesters",false,"Available registration semesters",&[],&["graduate"],"getCrAvailableSemesters"),
 op("course.plan",false,"Personal course plan",&["semester"],&["graduate"],"getCoursePlan"),
-op("course.search",false,"Course opening information and remaining capacity",&["semester"],&["graduate","page","id","name","day","period"],"searchCrCourses"),
+op("course.search",false,"Course opening information and remaining capacity",&["semester"],&["graduate","page","id","name","teacher","day","period","department","grade","category","note","undergrad_available","graduate_available"],"searchCrCourses + NextTHUxk serverSearch"),
 op("course.remaining",false,"Remaining course capacity",&["semester"],&["graduate","page","id","name","day","period"],"searchCrRemaining"),
-op("course.open",false,"Course opening information",&["semester"],&["graduate","page","id","name","day","period"],"searchCrPrimaryOpen"),
+op("course.open",false,"Course opening information",&["semester"],&["graduate","page","id","name","teacher","day","period","department","grade","category","note","undergrad_available","graduate_available"],"searchCrPrimaryOpen + NextTHUxk serverSearch"),
 op("course.selected",false,"Selected courses",&["semester"],&["graduate"],"getSelectedCourses"),
 op("course.select",true,"Submit a course selection with fresh CSRF token",&["semester","id","seq","priority","will"],&["graduate"],"selectCourse"),
-op("course.delete",true,"Withdraw a selected course",&["semester","id","seq"],&["graduate"],"deleteCourse"),
+op("course.delete",true,"Withdraw a selected course or leave the waiting queue",&["semester","id","seq"],&["graduate","candidate"],"deleteCourse + NextTHUxk dropCourse"),
 op("course.will",true,"Change course selection preference",&["semester","id","seq","will"],&["graduate"],"changeCourseWill"),
 op("course.stage",false,"Current registration stage",&["semester"],&["graduate"],"getCrCurrentStage"),
-op("course.queue",false,"Course waiting queue",&["semester"],&["graduate"],"getQueueInfo"),
+op("course.queue",false,"Courses currently in the waiting queue",&["semester"],&["graduate"],"getQueueInfo + NextTHUxk fetchCandidateCourses"),
 op("course.priority-meta",false,"Course preference allocation stage",&["semester"],&["graduate"],"searchCoursePriorityMeta"),
 op("course.priority",false,"Course preference statistics",&["semester"],&["graduate","sports","selected","page","id","seq","name","department"],"searchCoursePriorityInformation"),
 op("course.pf-set",true,"Set elective course P/F",&["semester","id"],&["graduate"],"setCoursePF"),
 op("course.pf-cancel",true,"Cancel elective course P/F",&["semester","id"],&["graduate"],"cancelCoursePF"),
 op("course.timetable",false,"Registration deadlines",&[],&[],"getCrTimetable"),
 op("course.schedule",false,"CR timetable as structured table rows",&["semester"],&["graduate"],"getCRSchedule"),
+op("course.levels",false,"Course type map from the live primary timetable page",&["semester"],&["graduate"],"NextTHUxk fetchLevelTable"),
+op("course.detail",false,"Read a course description from its detail URL identity",&["id","teacher_id"],&["graduate"],"NextTHUxk fetchCourseDetail"),
+op("course.whole-schedule",false,"Whole registered/candidate timetable with normalized meeting slots",&["semester"],&["graduate"],"NextTHUxk fetchWholeTimetable"),
 op("calendar.semesters",false,"Academic calendar current and next semesters",&[],&[],"getCalendar"),
 op("calendar.year",false,"Academic calendar year",&[],&[],"getSchoolCalendarYear"),
 op("calendar.image",false,"Academic calendar image URL",&["year","semester"],&["lang"],"getCalendarImageUrl"),
@@ -1145,6 +1504,7 @@ async fn course(session: &Session, op: &str, a: &Value) -> Result<Value> {
     if op != "course.semesters"
         && op != "course.timetable"
         && op != "course.captcha"
+        && op != "course.detail"
         && semester.is_empty()
     {
         bail!("semester is required");
@@ -1194,42 +1554,27 @@ if flag(a,"graduate"){json!({"id":field_value(&t,1),"name":field_value(&t,2),"cr
             if op != "course.remaining" {
                 f["m"] = json!("kkxxSearch");
                 f["pathContent"] = json!("一级课开课信息");
-                for key in [
-                    "showtitle",
-                    "p_rxklxm",
-                    "p_zjjsxm",
-                    "p_kkdwnm",
-                    "p_kcflm",
-                    "p_xkwzsm",
-                    "p_kctsm",
-                    "p_ssnj",
-                ] {
+                for key in ["showtitle", "p_kcflm", "p_xkwzsm"] {
                     f[key] = json!("");
                 }
+                f["p_zjjsxm"] = json!(d(a, "teacher", ""));
+                f["p_rxklxm"] = json!(d(a, "category", ""));
+                f["p_kkdwnm"] = json!(d(a, "department", ""));
+                f["p_kctsm"] = json!(d(a, "note", ""));
+                f["p_ssnj"] = json!(d(a, "grade", ""));
+                f["p_bkskyl_ig"] = json!(if flag(a, "undergrad_available") {
+                    "0"
+                } else {
+                    ""
+                });
+                f["p_yjskyl_ig"] = json!(if flag(a, "graduate_available") {
+                    "0"
+                } else {
+                    ""
+                });
                 let h = post(c, search, &f, true).await?;
                 open_result = footer(&h);
-                open_result["courses"] = named_rows(
-                    &h,
-                    ".trr2",
-                    &[
-                        (0, "department"),
-                        (1, "id"),
-                        (2, "seq"),
-                        (3, "name"),
-                        (4, "credits"),
-                        (5, "teacher"),
-                        (6, "bksCapacity"),
-                        (8, "yjsCapacity"),
-                        (10, "time"),
-                        (11, "note"),
-                        (12, "feature"),
-                        (13, "year"),
-                        (14, "secondary"),
-                        (16, "reUseCap"),
-                        (17, "restrict"),
-                        (18, "culture"),
-                    ],
-                );
+                open_result["courses"] = course_catalog_rows(&h);
                 if op == "course.open" {
                     return Ok(open_result);
                 }
@@ -1245,10 +1590,10 @@ if flag(a,"graduate"){json!({"id":field_value(&t,1),"name":field_value(&t,2),"cr
             }
             if let Some(items) = open_result["courses"].as_array_mut() {
                 for it in items {
-                    if let Some(rem) = rows
-                        .iter()
-                        .find(|v| v["id"] == it["id"] && v["seq"] == it["seq"])
-                    {
+                    if let Some(rem) = rows.iter().find(|v| {
+                        v["id"] == it["id"]
+                            && normalized_sequence(&v["seq"]) == normalized_sequence(&it["seq"])
+                    }) {
                         for key in ["capacity", "remaining", "queue"] {
                             it[key] = rem[key].clone();
                         }
@@ -1267,6 +1612,21 @@ if flag(a,"graduate"){json!({"id":field_value(&t,1),"name":field_value(&t,2),"cr
             Ok(open_result)
         }
         "course.selected" | "course.delete" | "course.will" => {
+            if op == "course.delete" && flag(a, "candidate") {
+                let h = get(
+                    c,
+                    &query(select, &json!({"m":"dlSearchTab","p_xnxq":semester}))?,
+                )
+                .await?;
+                let f = json!({
+                    "m": "dlDelete",
+                    "token": hidden(&h, "token")?,
+                    "p_xnxq": semester,
+                    "page": "",
+                    "p_del_id": format!("{};{};{};", semester, s(a, "id")?, s(a, "seq")?)
+                });
+                return message(&post(c, select, &f, false).await?);
+            }
             let h = get(
                 c,
                 &query(
@@ -1276,21 +1636,7 @@ if flag(a,"graduate"){json!({"id":field_value(&t,1),"name":field_value(&t,2),"cr
             )
             .await?;
             if op == "course.selected" {
-                return Ok(named_rows(
-                    &h,
-                    ".trr2",
-                    &[
-                        (1, "type"),
-                        (2, "will"),
-                        (3, "id"),
-                        (4, "name"),
-                        (5, "seq"),
-                        (6, "time"),
-                        (7, "teacher"),
-                        (8, "credit"),
-                        (9, "secondary"),
-                    ],
-                ));
+                return selected_course_rows(&h);
             }
             let mut f = json!({"m":"deleteYxk","token":hidden(&h,"token")?,"p_xnxq":semester,"tokenPriFlag":"yx"});
             if op == "course.delete" {
@@ -1327,15 +1673,29 @@ if flag(a,"graduate"){json!({"id":field_value(&t,1),"name":field_value(&t,2),"cr
             f[format!("p_{field}_id")] =
                 json!(format!("{};{};{};", semester, s(a, "id")?, s(a, "seq")?));
             f[format!("p_{field}_xkzy")] = json!(will);
-            message(&post(c, select, &f, false).await?)
+            let response = post(c, select, &f, false).await?;
+            if let Ok(result) = message(&response) {
+                return Ok(json!({"message": result["message"], "queued": false}));
+            }
+            if response.contains("是否排队") && response.contains("saveBksKcDl") {
+                f["m"] = json!("saveBksKcDl");
+                f["token"] = json!(hidden(&response, "token")?);
+                let queued_response = post(c, select, &f, false).await?;
+                let result = message(&queued_response)?;
+                return Ok(json!({"message": result["message"], "queued": true}));
+            }
+            bail!(
+                "Selection response was neither a result message nor a queue confirmation; inspect the selected and waiting-queue lists before retrying"
+            )
         }
         "course.stage" => {
             let h = get(
                 c,
-                &query(
-                    select,
-                    &json!({"m":"selectKc","p_xnxq":semester,"pathContent":"一级选课"}),
-                )?,
+                &format!(
+                    "{select}?m=selectKc&p_xnxq={}&pathContent={}",
+                    encoded(&semester, false),
+                    encoded("一级选课", true)
+                ),
             )
             .await?;
             Ok(
@@ -1345,10 +1705,11 @@ if flag(a,"graduate"){json!({"id":field_value(&t,1),"name":field_value(&t,2),"cr
         "course.queue" => {
             let h = get(
                 c,
-                &query(
-                    select,
-                    &json!({"m":"dlSearch","p_xnxq":semester,"pathContent":"队列信息查询"}),
-                )?,
+                &format!(
+                    "{select}?m=dlSearch&p_xnxq={}&pathContent={}",
+                    encoded(&semester, false),
+                    encoded("队列信息查询", true)
+                ),
             )
             .await?;
             Ok(named_rows(
@@ -1455,15 +1816,60 @@ if flag(a,"graduate"){json!({"id":field_value(&t,1),"name":field_value(&t,2),"cr
         "course.schedule" => {
             let h = get(
                 c,
-                &query(
-                    select,
-                    &json!({"m":"kbSearch","p_xnxq":semester,"pathContent":"一级课表"}),
-                )?,
+                &format!(
+                    "{select}?m=kbSearch&p_xnxq={}&pathContent={}",
+                    encoded(&semester, false),
+                    encoded("一级课表", true)
+                ),
             )
             .await?;
             Ok(
                 json!({"rows":tables(&h,"table tr"),"format":"source timetable table; not expanded events"}),
             )
+        }
+        "course.levels" => {
+            let h = get(
+                c,
+                &format!(
+                    "{select}?p_xnxq={}&pathContent={}",
+                    encoded(&semester, false),
+                    encoded("一级课表", true)
+                ),
+            )
+            .await?;
+            Ok(json!({
+                "courses": course_level_rows(&h),
+                "format": "course type map parsed from the live primary timetable"
+            }))
+        }
+        "course.detail" => {
+            let teacher_id = s(a, "teacher_id")?;
+            let id = s(a, "id")?;
+            let identity = format!("{teacher_id};{id}");
+            let h = get(
+                c,
+                &format!(
+                    "{CR_COURSE_DETAIL_URL}?m=showToXs&p_id={}",
+                    encoded(&identity, false)
+                ),
+            )
+            .await?;
+            Ok(course_detail_fields(&h))
+        }
+        "course.whole-schedule" => {
+            let h = get(
+                c,
+                &format!(
+                    "{CR_WHOLE_TIMETABLE_URL}?m=ztkbSearch&p_xnxq={}&pathContent={}",
+                    encoded(&semester, false),
+                    encoded("整体课表", true)
+                ),
+            )
+            .await?;
+            Ok(json!({
+                "courses": whole_timetable_rows(&h)?,
+                "format": "normalized course meeting slots from ztkbSearch"
+            }))
         }
         _ => bail!("Unknown course operation"),
     }
@@ -2362,6 +2768,107 @@ mod tests {
             json!({"page":2,"total_pages":3,"total_count":45})
         );
         assert!(footer("<html>unexpected</html>")["total_count"].is_null());
+    }
+    #[test]
+    fn current_course_catalog_keeps_teacher_and_detail_identity() {
+        let h = r#"
+<table><tr class="trr2">
+  <td>计算机系</td><td>40250001</td><td>01</td><td><a href="js.vjsKcbBs.do?m=showToXs&p_id=T0001%3B40250001">课程</a></td>
+  <td>3</td><td><a href="showJsDetail.do?p_jsh=T0001">教师</a></td>
+  <td>40</td><td>5</td><td>10</td><td>4</td><td>1-2</td><td>说明</td><td>特色</td><td>2</td><td>否</td><td></td><td>否</td><td>否</td><td>文化</td>
+</tr></table>"#;
+        let rows = course_catalog_rows(h);
+        assert_eq!(rows[0]["teacherId"], "T0001");
+        assert_eq!(rows[0]["bksRemaining"], "5");
+        assert_eq!(rows[0]["yjsRemaining"], "4");
+        assert!(rows[0]["detailUrl"].as_str().unwrap().contains("showToXs"));
+    }
+    #[test]
+    fn course_level_rows_use_the_live_type_map() {
+        let h = r#"
+<table><tr class="trr2"><td>1</td><td>40250001</td><td>01</td><td>必修</td></tr>
+<tr class="trr2"><td>2</td><td>40750002</td><td>02</td><td></td></tr></table>"#;
+        assert_eq!(
+            course_level_rows(h),
+            json!([
+                {"id":"40250001","seq":"1","property":"必修","typeCode":"006","typeLabel":"必修"},
+                {"id":"40750002","seq":"2","property":"","typeCode":"ty","typeLabel":"体育"}
+            ])
+        );
+    }
+    #[test]
+    fn selected_courses_tolerate_shifting_columns_and_normalize_will() {
+        let h = r#"
+<script>var zy=[["40250001,01","2","008","0","否"]];</script>
+<table><tr class="trr2">
+  <td>必修</td><td>第一志愿</td>
+  <td><input name="p_del_id" value="2026-2027-1;40250001;01;"></td>
+  <td>40250001</td><td>课程名</td><td>01</td><td>1-2(全周)</td><td>教师</td><td>3</td><td>否</td>
+</tr><tr class="trr2">
+  <td>不可退</td><td>必修</td><td>40470169</td><td>计算机科学研究实践</td><td>0</td>
+  <td>(全周)</td><td>陈一镭</td><td>9</td><td>否</td><td></td>
+</tr></table>"#;
+        let rows = selected_course_rows(h).unwrap();
+        assert_eq!(rows[0]["id"], "40250001");
+        assert_eq!(rows[0]["seq"], "01");
+        assert_eq!(rows[0]["will"], 2);
+        assert_eq!(rows[0]["type"], "限选");
+        assert_eq!(rows[0]["name"], "课程名");
+        assert_eq!(rows[0]["teacher"], "教师");
+        assert_eq!(rows[1]["id"], "40470169");
+        assert_eq!(rows[1]["seq"], "0");
+        assert_eq!(rows[1]["name"], "计算机科学研究实践");
+        assert_eq!(rows[1]["time"], "(全周)");
+        assert_eq!(rows[1]["teacher"], "陈一镭");
+        assert_eq!(rows[1]["credit"], "9");
+    }
+    #[test]
+    fn whole_timetable_merges_repeated_course_slots() {
+        let h = r#"
+<script>p_id=123;40250001; var strHTML1=""; strHTML1 += "；张老师"; strHTML1 += "；限选"; strHTML1 += "；1-2周";
+document.getElementById('a1_2').innerHTML += "<b>编译原理</b>";</script>
+<script>p_id=123;40250001; var strHTML1=""; strHTML1 += "；张老师"; strHTML1 += "；限选"; strHTML1 += "；1-2周";
+document.getElementById('a2_2').innerHTML += "<b>编译原理</b>";</script>"#;
+        let rows = whole_timetable_rows(h).unwrap();
+        assert_eq!(rows[0]["id"], "40250001");
+        assert_eq!(rows[0]["teacher"], "张老师");
+        assert_eq!(rows[0]["type"], "限选");
+        assert_eq!(rows[0]["time"], "2-1(1-2周),2-2(1-2周)");
+    }
+    #[test]
+    fn one_thu_course_operations_are_in_the_catalog() {
+        let operations = operations();
+        for name in [
+            "course.selected",
+            "course.select",
+            "course.delete",
+            "course.will",
+            "course.queue",
+            "course.priority",
+            "course.levels",
+            "course.detail",
+            "course.whole-schedule",
+        ] {
+            assert!(
+                operations
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|operation| operation["name"] == name),
+                "{name}"
+            );
+        }
+        let delete = operations
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|operation| operation["name"] == "course.delete")
+            .unwrap();
+        assert!(delete["optional"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|value| value == "candidate"));
     }
     #[tokio::test]
     async fn gbk_form_request_contract() {

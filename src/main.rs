@@ -270,27 +270,66 @@ async fn refresh_session(session: &Session) -> Result<()> {
 }
 
 async fn roam_for_call(session: &Session, call: &Call, policy: &str, payload: &str) -> Result<()> {
-    let credentials = if let Some(user) = &call.username {
-        Some(auth::LoginOptions {
-            username: user.clone(),
-            password: local_or_prompted_password(session, user)?.to_string(),
-            fingerprint: "thu-cli-native".into(),
+    let profile = session.load_profile()?;
+    let explicit_user = call.username.as_deref();
+    let username = explicit_user
+        .map(str::to_owned)
+        .or_else(|| profile.as_ref().map(|profile| profile.username.clone()));
+    let fingerprint = profile
+        .as_ref()
+        .map(|profile| profile.fingerprint.clone())
+        .unwrap_or_else(|| "thu-cli-native".into());
+    let credentials = |password: String| {
+        username.as_ref().map(|username| auth::LoginOptions {
+            username: username.clone(),
+            password,
+            fingerprint: fingerprint.clone(),
             service: "info".into(),
             two_factor_method: None,
-            interactive: true,
+            interactive: explicit_user.is_some(),
             trust_device: false,
             use_webvpn: false,
         })
+    };
+    let initial = if let Some(user) = explicit_user {
+        credentials(local_or_prompted_password(session, user)?.to_string())
     } else {
-        None
+        credentials(String::new())
     };
     let csrf = session.cookie_value("info.tsinghua.edu.cn", "XSRF-TOKEN")?;
+    let first_error = match auth::roam_with_csrf(
+        &session.auth_client,
+        &auth::RoamOptions {
+            policy: policy.to_owned(),
+            payload: payload.to_owned(),
+            credentials: initial,
+        },
+        csrf.as_deref(),
+    )
+    .await
+    {
+        Ok(_) => return Ok(()),
+        Err(error) => error,
+    };
+    if !auth::is_password_required(&first_error) {
+        return Err(first_error);
+    }
+    let Some(user) = username.as_deref() else {
+        return Err(first_error);
+    };
+    let Some(secret) = local_password(session, user)? else {
+        return Err(first_error.context(format!(
+            "destination SSO requires the saved local credential; run `thu-cli --session {} credential set --username {} --confirm`",
+            session.path().display(),
+            user
+        )));
+    };
     auth::roam_with_csrf(
         &session.auth_client,
         &auth::RoamOptions {
             policy: policy.to_owned(),
             payload: payload.to_owned(),
-            credentials,
+            credentials: credentials(secret.to_string()),
         },
         csrf.as_deref(),
     )

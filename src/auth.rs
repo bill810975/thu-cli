@@ -15,6 +15,7 @@ const SAVE_FINGER: &str = "https://id.tsinghua.edu.cn/b/doubleAuth/personal/save
 const INFO_APP: &str = "10000ea055dd8d81d09d5a1ba55d39ad";
 const INFO_HOME: &str = "https://info.tsinghua.edu.cn/f/info/gxfw_fg/common/index";
 const LEARN_APP: &str = "bb5df85216504820be7bba2b0ae1535b/0";
+const CR_LOGIN: &str = "http://zhjwxk.cic.tsinghua.edu.cn/xklogin.do?UIDisplayLanguage=zh_CN";
 const INFO_COOKIE: &str = "https://webvpn.tsinghua.edu.cn/wengine-vpn/cookie?method=get&host=info.tsinghua.edu.cn&scheme=https&path=/f/info/gxfw_fg/common/index";
 const INFO_ROAM: &str = "https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421f9f9479369247b59700f81b9991b2631506205de/b/yyfw/vyyfwxx/info/portal_fg/common/onlineAppRedirect";
 
@@ -105,7 +106,18 @@ async fn get(client: &Client, url: &str) -> Result<String> {
         .get(url)
         .send()
         .await
-        .map_err(|_| anyhow!("authentication network request failed (URL and response redacted)"))?
+        .map_err(|error| {
+            let stage = if error.is_redirect() {
+                "redirect policy rejected"
+            } else if error.is_connect() {
+                "connection failed"
+            } else if error.is_timeout() {
+                "request timed out"
+            } else {
+                "transport failed"
+            };
+            anyhow!("authentication network request failed: {stage} (URL and response redacted)")
+        })?
         .error_for_status()
         .map_err(|_| anyhow!("authentication HTTP status failed (URL redacted)"))?
         .text()
@@ -525,7 +537,7 @@ async fn roam_identity(
     let entry_url = if website {
         format!("{ID}/f/login")
     } else if policy == "cr" {
-        "https://webvpn.tsinghua.edu.cn/http/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/xklogin.do".into()
+        CR_LOGIN.into()
     } else {
         format!("{ID}/do/off/ui/auth/login/form/{payload}")
     };
@@ -542,7 +554,7 @@ async fn roam_identity(
     }
     check_success(&response)?;
     let target = anchor(&response)?;
-    let target = if policy == "card" {
+    let target = if matches!(policy, "card" | "cr") {
         trusted_target(&target)?.to_string()
     } else {
         webvpn_redirect(&target)?
@@ -929,6 +941,15 @@ mod tests {
             url.query_pairs().find(|(k, _)| k == "uri").unwrap().1,
             "/cb?ticket=abc&x=2"
         );
+    }
+    #[test]
+    fn course_registration_uses_direct_unified_identity_route() {
+        assert_eq!(
+            CR_LOGIN,
+            "http://zhjwxk.cic.tsinghua.edu.cn/xklogin.do?UIDisplayLanguage=zh_CN"
+        );
+        assert!(!CR_LOGIN.contains("webvpn.tsinghua.edu.cn"));
+        assert!(!CR_LOGIN.contains("captcha"));
     }
     #[test]
     fn legacy_proxy_mapping() {

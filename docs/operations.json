@@ -633,7 +633,7 @@
       "upstream": "getEleRechargePayCode"
     },
     {
-      "description": "Fetch course-registration captcha as base64 for manual solving",
+      "description": "Legacy course-registration captcha fallback as base64; modern SSO does not request it",
       "mutating": false,
       "name": "course.captcha",
       "optional": [],
@@ -671,13 +671,20 @@
         "page",
         "id",
         "name",
+        "teacher",
         "day",
-        "period"
+        "period",
+        "department",
+        "grade",
+        "category",
+        "note",
+        "undergrad_available",
+        "graduate_available"
       ],
       "required": [
         "semester"
       ],
-      "upstream": "searchCrCourses"
+      "upstream": "searchCrCourses + NextTHUxk serverSearch"
     },
     {
       "description": "Remaining course capacity",
@@ -705,13 +712,20 @@
         "page",
         "id",
         "name",
+        "teacher",
         "day",
-        "period"
+        "period",
+        "department",
+        "grade",
+        "category",
+        "note",
+        "undergrad_available",
+        "graduate_available"
       ],
       "required": [
         "semester"
       ],
-      "upstream": "searchCrPrimaryOpen"
+      "upstream": "searchCrPrimaryOpen + NextTHUxk serverSearch"
     },
     {
       "description": "Selected courses",
@@ -742,18 +756,19 @@
       "upstream": "selectCourse"
     },
     {
-      "description": "Withdraw a selected course",
+      "description": "Withdraw a selected course or leave the waiting queue",
       "mutating": true,
       "name": "course.delete",
       "optional": [
-        "graduate"
+        "graduate",
+        "candidate"
       ],
       "required": [
         "semester",
         "id",
         "seq"
       ],
-      "upstream": "deleteCourse"
+      "upstream": "deleteCourse + NextTHUxk dropCourse"
     },
     {
       "description": "Change course selection preference",
@@ -783,7 +798,7 @@
       "upstream": "getCrCurrentStage"
     },
     {
-      "description": "Course waiting queue",
+      "description": "Courses currently in the waiting queue",
       "mutating": false,
       "name": "course.queue",
       "optional": [
@@ -792,7 +807,7 @@
       "required": [
         "semester"
       ],
-      "upstream": "getQueueInfo"
+      "upstream": "getQueueInfo + NextTHUxk fetchCandidateCourses"
     },
     {
       "description": "Course preference allocation stage",
@@ -870,6 +885,43 @@
         "semester"
       ],
       "upstream": "getCRSchedule"
+    },
+    {
+      "description": "Course type map from the live primary timetable page",
+      "mutating": false,
+      "name": "course.levels",
+      "optional": [
+        "graduate"
+      ],
+      "required": [
+        "semester"
+      ],
+      "upstream": "NextTHUxk fetchLevelTable"
+    },
+    {
+      "description": "Read a course description from its detail URL identity",
+      "mutating": false,
+      "name": "course.detail",
+      "optional": [
+        "graduate"
+      ],
+      "required": [
+        "id",
+        "teacher_id"
+      ],
+      "upstream": "NextTHUxk fetchCourseDetail"
+    },
+    {
+      "description": "Whole registered/candidate timetable with normalized meeting slots",
+      "mutating": false,
+      "name": "course.whole-schedule",
+      "optional": [
+        "graduate"
+      ],
+      "required": [
+        "semester"
+      ],
+      "upstream": "NextTHUxk fetchWholeTimetable"
     },
     {
       "description": "Academic calendar current and next semesters",

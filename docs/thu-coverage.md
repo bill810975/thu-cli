@@ -14,6 +14,10 @@ thu-cli describe thu course.select
 
 Domains: academic course registration; primary, secondary and summer CR timetables; personal calendars; unified identity profile/devices/passkey management; academic grades; course assessment; classrooms; invoices; bank and graduate-income history; degree programme tables; dorm electricity; network self-service; campus news and subscriptions; library seats/rooms; sports reservations; campus card; THOS tasks/services; campus GitLab; Coremail sending; THU Info app feedback/version endpoints; campus MadModel chat.
 
+The full registration endpoint map, including the 2026 OneTHU
+NextTHUxk-derived additions, is documented in
+[course-registration.md](course-registration.md).
+
 `docs/thu-public-api-matrix.md` inventories **every public InfoHelper member**. An operation mapping does not mean identical mobile presentation, identical output schema, or a live-verified server integration. Auth/local utility/obsolete methods are classified separately. Passkey key generation and enrollment are not implemented.
 
 ## Linux use

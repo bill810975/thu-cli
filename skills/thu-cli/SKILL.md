@@ -166,6 +166,31 @@ For other campus services, inspect the catalog first. Prefixes currently cover
 `network`, `program`, `assessment`, `classroom`, `dorm`, `invoice`, `thos`, and
 `gitlab`, plus the `wsbx` reimbursement workflow.
 
+## Course Registration
+
+The current Info "本科生选课" card opens the direct registration host through
+`xklogin.do`, then unified identity returns a destination ticket through
+`j_acegi_login.do`. This path does not add the legacy CAPTCHA layer. Do not call
+`course.captcha` merely because an older client implementation did; use it only
+when the live destination explicitly requests that challenge.
+
+Start with read-only calls:
+
+```sh
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu course.semesters
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu course.selected --args '{"semester":"SEMESTER_ID"}'
+```
+
+The registration homepage can default to an upcoming term while the currently
+taught term is the preceding semester. Resolve the intended term before
+reporting courses. Course selection, deletion, volunteer changes, and P/F
+changes are mutations: inspect `course.selected` and `course.queue`, use the
+live `semester`, course number and section, and require explicit authorization
+for that exact action. Never infer a section number from a course name.
+
 ## Sports Venue Booking
 
 The retired `50.tsinghua.edu.cn/gymbook` service is not used. Current sports

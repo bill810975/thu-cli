@@ -11,6 +11,15 @@ use std::{
 };
 use zeroize::Zeroizing;
 
+fn trusted_auth_destination(url: &reqwest::Url) -> bool {
+    let host = url.host_str().unwrap_or_default();
+    let school = host == "tsinghua.edu.cn" || host.ends_with(".tsinghua.edu.cn");
+    url.scheme() == "https" && school
+        // The legacy zhjwxk application still redirects its SSO bootstrap
+        // through this campus host over HTTP before reaching unified identity.
+        || (url.scheme() == "http" && host == "zhjwxk.cic.tsinghua.edu.cn")
+}
+
 pub struct Session {
     pub client: Client,
     pub auth_client: Client,
@@ -105,9 +114,8 @@ impl Session {
             .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36").timeout(Duration::from_secs(60))
             .redirect(reqwest::redirect::Policy::custom(|attempt| {
                 let u=attempt.url();
-                let host=u.host_str().unwrap_or_default();
                 if attempt.previous().len()>=15 { attempt.error("Too many authentication redirects") }
-                else if u.scheme()=="https" && (host=="tsinghua.edu.cn" || host.ends_with(".tsinghua.edu.cn")) {attempt.follow()}
+                else if trusted_auth_destination(u) {attempt.follow()}
                 else {attempt.error("Authentication redirect outside trusted HTTPS campus domains")}
             })).build()?;
         Ok(Self {
@@ -483,6 +491,22 @@ mod tests {
 
         session.clear_profile().unwrap();
         assert_eq!(session.load_profile().unwrap(), None);
+    }
+
+    #[test]
+    fn auth_redirects_allow_only_the_legacy_course_http_host() {
+        assert!(trusted_auth_destination(
+            &reqwest::Url::parse("http://zhjwxk.cic.tsinghua.edu.cn/xsxk_index.jsp").unwrap()
+        ));
+        assert!(trusted_auth_destination(
+            &reqwest::Url::parse("https://id.tsinghua.edu.cn/login").unwrap()
+        ));
+        assert!(!trusted_auth_destination(
+            &reqwest::Url::parse("http://info.tsinghua.edu.cn/").unwrap()
+        ));
+        assert!(!trusted_auth_destination(
+            &reqwest::Url::parse("https://example.org/").unwrap()
+        ));
     }
 
     #[test]
