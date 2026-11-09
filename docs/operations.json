@@ -2367,6 +2367,7 @@
       "name": "wsbx.invoice.bind",
       "optional": [
         "ywlx",
+        "project",
         "fpid",
         "contract"
       ],
@@ -2375,7 +2376,7 @@
         "item",
         "invoice_numbers"
       ],
-      "upstream": "zdhb/dzfp/bind or invoice/binding"
+      "upstream": "zdhb/dzfp/bind, rmb/bind/fp/get, or invoice/binding"
     },
     {
       "description": "Unbind one invoice and its linked route data using the selected reimbursement route",

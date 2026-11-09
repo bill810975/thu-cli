@@ -45,9 +45,42 @@ Extract or ask for these facts:
   notice, trip approval, or other supporting document is required.
 - Whether this is a new reimbursement, an existing draft, or an invoice already
   consumed by an earlier reimbursement.
+- Exact witness/proof person for every invoice (`zmr`/`zmrmc`).
+- Reimbursement payee and bank/account choice: the operator or another named
+  recipient.
+- Exact funding project, including project number and name.
+- Approval routing: submit with the operator as responsible person, or send the
+  approval to a specifically named project owner/other approver.
 
 Do not infer an ambiguous expense category merely from the seller's name. Use
 the project's live reimbursement template or ask the user.
+
+## Mandatory Reimbursement Setup Confirmation
+
+Before the first effectful write that selects the witness, funding, payment
+destination, or approval route, ask the user to confirm all four items below.
+Read-only inspection may happen first. If an existing draft already contains
+these values, read them back and ask the user to confirm or correct them.
+
+1. **Invoice witness/proof person:** `发票证明人写谁？`
+2. **Reimbursement payee:** `报销到谁的账上？` If not the operator, obtain the
+   exact intended recipient and select only a live payment method that supports
+   that recipient.
+3. **Funding project:** `用哪笔经费？` Use the exact project number and project
+   name; do not select a project from the most recent draft or available
+   balance.
+4. **Approval routing:** `要推送到别的经费负责人手上，还是直接填自己？`
+   If routing to another person, confirm the exact project owner/approver.
+
+Never default the witness to the PI, project owner, operator, or the person used
+on earlier invoices. Prior reimbursements are evidence only; the user must
+confirm the witness for each new reimbursement. Lack of an explicit answer
+blocks the witness mutation and final submission.
+
+Before `wsbx.draft.submit`, show a compact final confirmation containing the
+witness, payee/account, project, and approval route, together with the invoice,
+amount, expense category, and attachments. Require explicit approval of that
+complete set.
 
 ## CLI-First Inspection
 
@@ -110,7 +143,8 @@ creating one:
 3. Bind unused wallet invoices with `wsbx.invoice.bind`.
 4. If WSBX rejects binding because the handler, project owner, and invoice
    handler are the same person, search `wsbx.employee.search`, then use
-   authorized `wsbx.invoice.add-witness` with an accurate business note.
+   authorized `wsbx.invoice.add-witness` only after the user has supplied the
+   witness required by the mandatory setup confirmation above.
 5. Upload required supporting documents with
    `wsbx.attachment.upload`, using a category returned by
    `wsbx.attachment.types`.
@@ -204,7 +238,10 @@ that the university paid the overseas beneficiary.
 - `wsbx.draft.submit` creates a real approval. Use it only after the user
   explicitly authorizes the exact receipt, project, category, amount,
   attachments, and payment rows.
-- For daily `052`, `zt=8` is still pending approval submission. The CLI's
+- Immediately before submission, read back and confirm the witness
+  (`zmr`/`zmrmc`), reimbursement payee/account, funding project, and approval
+  routing. Do not silently overwrite or "correct" any of these fields.
+- For daily `052` and smart `051`, `zt=8` is still pending approval submission. The CLI's
   `draft.submit` completes both phases and must reach `zt=9` before reporting
   that the receipt entered approval.
 - Never submit automatically because the invoice was recognized or because the

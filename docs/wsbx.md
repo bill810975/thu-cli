@@ -175,7 +175,7 @@ The same argument file can be used with `wsbx.draft.save` or
 13. Submit separately only after explicit authorization for the exact receipt,
     project, amount, expense items, attachments, and payment rows.
 
-For daily `052`, `wsbx.draft.submit` now completes both WSBX phases: it first
+For daily `052` and smart `051`, `wsbx.draft.submit` completes both WSBX phases: it first
 creates the pending-approval receipt (`zt=8`), then reads or generates its
 approval workflow, validates every rank/approver, and calls
 `approve/spxxdl/submit`. Only `zt=9` means the receipt has actually entered
@@ -201,7 +201,9 @@ final workflow submission.
 Invoice binding is route-aware:
 
 - `052` uses `zdhb/dzfp/bind` and assigns the requested expense item directly.
-- Other routes use the shared `invoice/binding` contract.
+- `051` uses `rmb/bind/fp/get` with the selected project, matching the
+  receipt-wallet "jump to reimbursement" flow.
+- `06`, `19`, and `1206` use the shared `invoice/binding` contract.
 - `19` additionally assigns conference expense categories.
 - `06`, `051`, and `1206` may require route-specific travel/allowance/currency
   rows after invoice selection.

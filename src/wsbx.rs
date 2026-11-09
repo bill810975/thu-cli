@@ -114,6 +114,10 @@ fn route_arg(a: &Value) -> Result<ReimbursementRoute> {
     ReimbursementRoute::from_ywlx(ywlx_arg(a)?)
 }
 
+fn requires_approval_submission(route: ReimbursementRoute) -> bool {
+    matches!(route, ReimbursementRoute::Daily | ReimbursementRoute::Smart)
+}
+
 #[derive(Deserialize, Serialize)]
 struct StoredAuth {
     token: String,
@@ -2321,27 +2325,63 @@ async fn project_template(
     }
 }
 
+struct InvoiceBindingContext<'a> {
+    ywbh: &'a str,
+    project: Option<&'a Value>,
+    operator: &'a str,
+    operator_name: &'a str,
+    contract: &'a str,
+}
+
+fn shared_invoice_binding_request(
+    route: ReimbursementRoute,
+    invoice_numbers: &[String],
+    context: &InvoiceBindingContext<'_>,
+) -> Result<(&'static str, Option<&'static str>, Value)> {
+    if route == ReimbursementRoute::Smart {
+        let project = context
+            .project
+            .ok_or_else(|| anyhow!("project must be a JSON object"))?;
+        let (bmbh, xmbh) = project_parts(project)?;
+        return Ok((
+            "/rmb/bind/fp/get",
+            None,
+            json!({
+                "bmbh": bmbh,
+                "xmbh": xmbh,
+                "dzfphList": invoice_numbers,
+                "ywbh": context.ywbh,
+                "czr": context.operator,
+                "czrmc": context.operator_name
+            }),
+        ));
+    }
+    Ok((
+        "/invoice/binding",
+        Some("invoice"),
+        json!({
+            "dzfphs": invoice_numbers,
+            "ywbh": context.ywbh,
+            "czr": context.operator,
+            "czrmc": context.operator_name,
+            "htbh": context.contract
+        }),
+    ))
+}
+
 async fn bind_shared_invoices(
     client: &mut WsbxClient<'_>,
-    ywbh: &str,
+    route: ReimbursementRoute,
     invoice_numbers: &[String],
-    contract: &str,
+    context: &InvoiceBindingContext<'_>,
 ) -> Result<Value> {
     let mut pending = invoice_numbers.to_vec();
     for _ in 0..4 {
-        let result = client
-            .post(
-                "/invoice/binding",
-                json!({
-                    "dzfphs": pending,
-                    "ywbh": ywbh,
-                    "czr": user_id(client)?,
-                    "czrmc": client.auth.as_ref().map(|auth| auth.user_name.as_str()).unwrap_or(""),
-                    "htbh": contract
-                }),
-                Some("invoice"),
-            )
-            .await?;
+        let (path, header, payload) = shared_invoice_binding_request(route, &pending, context)?;
+        let result = client.post(path, payload, header).await?;
+        if route == ReimbursementRoute::Smart {
+            return Ok(result);
+        }
         let rejected = result["data"]["delDzfphs"].as_array().map_or(0, Vec::len);
         if rejected > 0 {
             bail!(
@@ -2483,7 +2523,7 @@ pub fn operations() -> Vec<Value> {
         json!({"name":"wsbx.invoice.add-witness","mutating":true,"description":"Add a witness/proof person to one or more receipt-wallet invoices","required":["invoice_numbers","witness","witness_name"],"optional":["note"],"upstream":"invoice/addZmr"}),
         json!({"name":"wsbx.invoice.wallet.list","mutating":false,"description":"List invoices in the receipt wallet by pending or used state","required":[],"optional":["query","page_size","page_number","status"],"upstream":"quick/invoice/getQuickList"}),
         json!({"name":"wsbx.invoice.list","mutating":false,"description":"List electronic invoices by pending or used reimbursement state","required":[],"optional":["ywbh","query","page_size","status"],"upstream":"invoice/list"}),
-        json!({"name":"wsbx.invoice.bind","mutating":true,"description":"Bind selected electronic invoices using the selected reimbursement route","required":["ywbh","item","invoice_numbers"],"optional":["ywlx","fpid","contract"],"upstream":"zdhb/dzfp/bind or invoice/binding"}),
+        json!({"name":"wsbx.invoice.bind","mutating":true,"description":"Bind selected electronic invoices using the selected reimbursement route","required":["ywbh","item","invoice_numbers"],"optional":["ywlx","project","fpid","contract"],"upstream":"zdhb/dzfp/bind, rmb/bind/fp/get, or invoice/binding"}),
         json!({"name":"wsbx.invoice.unbind","mutating":true,"description":"Unbind one invoice and its linked route data using the selected reimbursement route","required":["ywbh","invoice_number"],"optional":["ywlx","employee","ticket_state","travel_type"],"upstream":"zdhb/dzfp/mx/delete, clf/gn/dzfpHk/delete, invoice/release/use, or conference cleanup endpoints"}),
         json!({"name":"wsbx.invoice.set-amount","mutating":true,"description":"Set the reimbursed amount of an electronic invoice using the selected reimbursement route","required":["ywbh","invoice_number","amount"],"optional":["ywlx","item"],"upstream":"zdhb/dzfp/sbje/update or intl/travel/invoice/update"}),
         json!({"name":"wsbx.invoice.detail","mutating":false,"description":"Read electronic invoices attached to a reimbursement item","required":["ywbh","item"],"optional":[],"upstream":"zdhb/dzfp/mx/get"}),
@@ -2983,11 +3023,25 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                 }));
             }
 
+            let operator = user_id(&client)?;
+            let operator_name = client
+                .auth
+                .as_ref()
+                .map(|auth| auth.user_name.as_str())
+                .unwrap_or("")
+                .to_owned();
+            let binding_context = InvoiceBindingContext {
+                ywbh: &ywbh,
+                project: a.get("project"),
+                operator: &operator,
+                operator_name: &operator_name,
+                contract: a.get("contract").and_then(Value::as_str).unwrap_or(""),
+            };
             let result = bind_shared_invoices(
                 &mut client,
-                &ywbh,
+                route,
                 &invoice_numbers,
-                a.get("contract").and_then(Value::as_str).unwrap_or(""),
+                &binding_context,
             )
             .await?;
             if route == ReimbursementRoute::Conference {
@@ -3253,7 +3307,7 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
             let ywbh = required(a, "ywbh")?;
             let route = route_arg(a)?;
             let ywlx = route.ywlx();
-            if submit && route == ReimbursementRoute::Daily {
+            if submit && requires_approval_submission(route) {
                 let status = client
                     .get("/common/get/ywbxr", json!({"ywbh": ywbh}), None)
                     .await?;
@@ -3353,11 +3407,13 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
             let result = client
                 .post(route.save_path(), payload, None)
                 .await
-                .with_context(|| {
+                .map_err(|error| {
                     if submit {
-                        "WSBX rejected the submission; inspect the draft status and project data permission before retrying"
+                        anyhow!(
+                            "WSBX rejected the submission; inspect the draft status and project data permission before retrying: {error:#}"
+                        )
                     } else {
-                        "WSBX rejected the draft save; inspect the draft before retrying"
+                        anyhow!("WSBX rejected the draft save; inspect the draft before retrying: {error:#}")
                     }
                 })?;
             let warnings = result["data"]["warnMessage"].clone();
@@ -3371,7 +3427,7 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
                 "warnings": warnings,
                 "result": result["data"]
             });
-            if submit && route == ReimbursementRoute::Daily {
+            if submit && requires_approval_submission(route) {
                 response["approval"] = submit_approval(&mut client, &ywbh, ywlx, a)
                     .await
                     .with_context(|| {
@@ -3833,7 +3889,73 @@ mod tests {
             ReimbursementRoute::InternationalTravel.save_path(),
             "/intl/travel/save"
         );
+        assert!(requires_approval_submission(ReimbursementRoute::Daily));
+        assert!(requires_approval_submission(ReimbursementRoute::Smart));
+        assert!(!requires_approval_submission(
+            ReimbursementRoute::DomesticTravel
+        ));
+        assert!(!requires_approval_submission(
+            ReimbursementRoute::Conference
+        ));
+        assert!(!requires_approval_submission(
+            ReimbursementRoute::InternationalTravel
+        ));
         assert!(ReimbursementRoute::from_ywlx("999").is_err());
+    }
+
+    #[test]
+    fn smart_invoice_binding_uses_the_rmb_wallet_contract() {
+        let operations = operations();
+        let bind = operations
+            .iter()
+            .find(|operation| operation["name"] == "wsbx.invoice.bind")
+            .unwrap();
+        assert!(bind["optional"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|value| value == "project"));
+        assert!(bind["upstream"]
+            .as_str()
+            .unwrap()
+            .contains("rmb/bind/fp/get"));
+
+        let project = json!({"bmbh": "999", "xmbh": "FIXTURE"});
+        let invoices = vec!["INV-1".to_owned()];
+        let binding_context = InvoiceBindingContext {
+            ywbh: "YB0000000000051",
+            project: Some(&project),
+            operator: "fixture-user",
+            operator_name: "Fixture User",
+            contract: "",
+        };
+        let (path, header, payload) =
+            shared_invoice_binding_request(ReimbursementRoute::Smart, &invoices, &binding_context)
+                .unwrap();
+        assert_eq!(path, "/rmb/bind/fp/get");
+        assert_eq!(header, None);
+        assert_eq!(payload["bmbh"], "999");
+        assert_eq!(payload["xmbh"], "FIXTURE");
+        assert_eq!(payload["dzfphList"], json!(["INV-1"]));
+        assert!(payload.get("dzfphs").is_none());
+
+        let binding_context = InvoiceBindingContext {
+            ywbh: "YB0000000000019",
+            project: Some(&project),
+            operator: "fixture-user",
+            operator_name: "Fixture User",
+            contract: "CONTRACT-1",
+        };
+        let (path, header, payload) = shared_invoice_binding_request(
+            ReimbursementRoute::Conference,
+            &invoices,
+            &binding_context,
+        )
+        .unwrap();
+        assert_eq!(path, "/invoice/binding");
+        assert_eq!(header, Some("invoice"));
+        assert_eq!(payload["dzfphs"], json!(["INV-1"]));
+        assert_eq!(payload["htbh"], "CONTRACT-1");
     }
 
     #[test]
