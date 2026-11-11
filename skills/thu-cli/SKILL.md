@@ -240,6 +240,51 @@ the official venue/order page and only within the displayed hold deadline.
 Cancellation requires the exact reservation UUID from `sports.records` and an
 explicit user request.
 
+## EasyCompute and Paratera
+
+Use the private `easycompute-auth` sidecar through the CLI. Never print or copy
+the EasyCompute access code, Paratera token, access key, or one-time LLM key.
+
+Start with `easycompute.account`, `paratera.session`, `paratera.access-keys`,
+`paratera.api-keys`, `paratera.containers`, and
+`paratera.container.options`. Build a container request offline with
+`paratera.container.plan`, then repeat its returned payload through
+`paratera.container.preflight`. `paratera.container.create` and every API-key
+create/delete/status operation require `--confirm` after exact review.
+
+API-key creation must write the full provider response to a new private output
+file and return only its path. If a create response is ambiguous, list keys
+before considering another attempt. See `docs/easycompute.md`.
+
+## Classroom Reservations
+
+The current platform keeps its token in `jxlytj-auth`. Start with
+`classroom-reservation.auth-status`, `scenes`, `scene-detail`, `site-types`,
+`records`, and `history`. Availability operations accept the exact
+server-shaped frontend payload.
+
+Locking, booking, cancellation, detail updates, extension, and early ending are
+mutations. Inspect availability or reservation detail immediately before the
+write and require explicit authorization for the exact room, date, time,
+members, and form values. Never repeat an ambiguous lock or booking without
+checking records. Some frontend room-selection, credit, and lock-config
+endpoints currently return HTTP 404; report the upstream failure instead of
+treating it as empty data. See `docs/reservations.md`.
+
+## Campus Visitor Appointments
+
+Temporary visitor reporting uses `visit.*` and the private `visit-auth` sidecar.
+THOS student and relative visitor workflows use
+`visit.thos-service-status`, `visit.thos-apply-info`, and
+`visit.thos-form-load` after `visit.thos-enter` has established the campus
+session.
+
+The known workflow names are `student_visitor` and `relative_visitor`. Verify
+service limits and the loaded form before discussing submission. THOS form
+submission is not exposed because the Matrix runtime must assemble its variable
+and file payloads client-side. Temporary visitor `visit.form-submit` requires a
+fully reviewed payload and `--confirm`.
+
 ## Online Reimbursement
 
 The `wsbx.*` operations use the authenticated Info profile to acquire a wsbx SSO

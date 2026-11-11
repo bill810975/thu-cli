@@ -1,7 +1,7 @@
 {
   "package": "thu-cli",
   "version": "0.1.6",
-  "date": "2026-11-05",
+  "date": "2026-11-11",
   "verified_target": "aarch64-apple-darwin",
   "binary_bundled": false,
   "rustc": "1.99.1 (58cf8f9c3 2026-10-13)",
@@ -11,15 +11,15 @@
     "thu-learn-lib": "1b79b984f34a6f1ca0532beaf59abac55db7f52c"
   },
   "operation_counts": {
-    "thu": 179,
+    "thu": 271,
     "learn": 35,
     "app": 13
   },
   "tests": {
-    "total": 98,
-    "library": 83,
+    "total": 145,
+    "library": 125,
     "cli_unit": 2,
-    "cli_integration": 13
+    "cli_integration": 18
   },
   "live_authenticated_read_only_tests": true,
   "live_mutations_tested": true

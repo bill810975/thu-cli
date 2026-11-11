@@ -38,6 +38,13 @@ agent。
   mode-600 JSON 凭据。
 - 支持校园新闻、本研选课查询与选退课/志愿/P-F 操作、课表、日历、图书馆、
   当前体育场馆的查询与预约、一卡通、网络、邮箱、发票、THOS、GitLab 等服务。
+- 支持 Info 应用门户全部卡片的实时目录、SSO 目的地解析和静态接口发现。
+- 支持 EasyCompute/Paratera 账号、容器、镜像、价格和 LLM/API Key 查询；
+  容器配置可离线生成，创建机器或 Key 均需显式确认。
+- 支持教室/研讨间签名接口、可用时段、预约记录、锁定、预约、取消、续时和
+  提前结束。
+- 支持临时来访报备，以及学生访客/亲友来访的 THOS 服务检查、
+  表单标识读取和只读表单加载。
 - 支持日常报销（`052`）、智能/境外票据（`051`）、境内差旅（`06`）、
   会议（`19`）和境外差旅（`1206`）草稿，包括各路由的报销事项、
   本地票据 OCR 与验真、票夹入库、同人验收人、电子发票、附件、支付信息、
@@ -53,6 +60,11 @@ agent。
 当前 `sports.tsinghua.edu.cn` 场馆系统的 SSO、场馆、可用时段、支付渠道、
 历史记录和预约预检已做过只读实测。创建预约仍是需要单独确认的写操作，并且
 CLI 不会自动完成支付。
+
+教室预约已完成 SSO、场景、可用时段请求契约、预约记录、历史记录、
+推荐/常用房间和系统配置的只读实测。EasyCompute/Paratera 已完成账号交换、
+Key/容器查询、容器资源和 5090 询价/可用性预检；未创建任何机器或 API Key。
+THOS 学生访客与亲友来访表单均已成功加载，未提交。
 
 日常报销客户端还使用真实账号完成了本地票据 OCR 与验真、票夹入库、验收人、
 发票绑定、项目绑定和草稿暂存验证。智能/境外票据、境内差旅、会议和境外
@@ -221,6 +233,26 @@ thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
 确认具体场地、日期、时间和支付方式后，把 `sports.preflight` 换成
 `sports.book` 并加 `--confirm`。详见
 [docs/reservations.md](docs/reservations.md)。
+
+教室和入校预约的只读入口：
+
+```sh
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu classroom-reservation.scenes
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu classroom-reservation.records
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu visit.thos-service-status --args '{"workflow":"student_visitor"}'
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu visit.thos-form-load --args '{"workflow":"student_visitor"}'
+```
+
+教室写操作、访客工作流、THOS 表单 ID 和浏览器实测的回退行为详见
+[docs/reservations.md](docs/reservations.md)。EasyCompute 的接口与安全流程
+详见 [docs/easycompute.md](docs/easycompute.md)。
 
 日常报销的只读入口：
 

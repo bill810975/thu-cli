@@ -127,6 +127,20 @@ impl Session {
         })
     }
 
+    pub(crate) fn client_with_redirect_policy(
+        &self,
+        redirect: reqwest::redirect::Policy,
+    ) -> Result<Client> {
+        Client::builder()
+            .cookie_provider(self.jar.clone())
+            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36")
+            .timeout(Duration::from_secs(60))
+            .connect_timeout(Duration::from_secs(20))
+            .redirect(redirect)
+            .build()
+            .context("building temporary HTTP client")
+    }
+
     pub fn save(&self) -> Result<()> {
         secure_parent(&self.path)?;
         let temp = self
@@ -406,7 +420,10 @@ impl Session {
         self.save()?;
         self.clear_profile()?;
         self.remove_private_sidecar("wsbx-auth")?;
-        self.remove_private_sidecar("sports-auth")
+        self.remove_private_sidecar("sports-auth")?;
+        self.remove_private_sidecar("easycompute-auth")?;
+        self.remove_private_sidecar("jxlytj-auth")?;
+        self.remove_private_sidecar("visit-auth")
     }
 }
 

@@ -41,6 +41,16 @@ For an agent-driven installation, give an agent the prompt in
   search/selection/drop/volunteer/PF operations, timetables, calendar, library,
   current sports-venue discovery/booking, card, network, mail, invoices, THOS,
   GitLab, and other service operations.
+- A live catalogue of every application card published by the Info service
+  portal, including SSO destination resolution, metadata lookup, and static
+  HTML/JavaScript API discovery that never invokes discovered business APIs.
+- EasyCompute and Paratera account, cluster, container, image, price, and
+  LLM/API-key discovery, with offline container planning and guarded key or
+  machine creation.
+- Signed classroom/meeting-room discovery, availability, records, locks,
+  booking, cancellation, extension, and early-end operations.
+- Temporary visitor reporting plus THOS student/relative visitor service
+  checks, service/form identifiers, and read-only Matrix form loading.
 - Reimbursement drafts for daily (`052`), smart/foreign-invoice (`051`),
   domestic travel (`06`), conference (`19`), and international travel (`1206`),
   including local receipt OCR/verification and wallet insertion,
@@ -60,6 +70,16 @@ every campus service remain subject to the boundaries in
 The current `sports.tsinghua.edu.cn` venue system has live-tested SSO, scene,
 availability, payment-channel, record, and booking-preflight reads. Booking
 creation remains a separately confirmed mutation and never completes payment.
+
+The classroom service has live-tested SSO, scenes, availability-query
+contracts, records, history, recommended/common rooms, and configuration.
+EasyCompute/Paratera has live-tested account exchange, key/container reads,
+container options, and 5090 price/availability preflight. No machine or API key
+was created.
+
+THOS student and relative visitor forms have both been loaded successfully
+without submission. Temporary visitor menus and unread counts were also read
+live.
 
 The daily reimbursement client has also been checked against a live account
 through local receipt OCR/verification, wallet insertion, witness assignment,
@@ -210,6 +230,10 @@ thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
   thu news.search --no-roam \
   --args '{"keyword":"任免","page":1,"exact":false}'
 
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu news.file-download --no-roam \
+  --args '{"wjid":"ATTACHMENT_WJID","output":"/tmp/info-attachment.doc"}'
+
 thu-cli --compact --session "$HOME/.config/thu-cli/learn.json" \
   learn semesters
 ```
@@ -232,6 +256,41 @@ thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
 Repeat `sports.preflight` with `--confirm` as `sports.book` only after explicit
 confirmation of the exact court, date, time, and payment mode. See
 [docs/reservations.md](docs/reservations.md).
+
+Classroom and visitor reads:
+
+```sh
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu classroom-reservation.scenes
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu classroom-reservation.records
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu visit.thos-service-status --args '{"workflow":"student_visitor"}'
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu visit.thos-form-load --args '{"workflow":"student_visitor"}'
+```
+
+See [docs/reservations.md](docs/reservations.md) for classroom writes, visitor
+workflows, exact THOS identifiers, and browser-verified fallback behavior.
+
+EasyCompute discovery and offline container planning:
+
+```sh
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu easycompute.account
+
+thu-cli --compact --session "$HOME/.config/thu-cli/info.json" \
+  thu paratera.api-keys
+
+thu-cli --compact thu paratera.container.plan \
+  --args '{"alias_name":"research-5090","cluster_id":105,"region_id":104,"zone_id":160,"service_model":"rtx5090.xeon6530.xlarge","image_uuid":"ackci-0000qxv64"}'
+```
+
+See [docs/easycompute.md](docs/easycompute.md) before creating a container or
+API key.
 
 Daily reimbursement discovery and a safe read-only start:
 

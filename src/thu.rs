@@ -73,6 +73,7 @@ const SEARCH_NEWS_LIST_URL: &str =
     "https://info.tsinghua.edu.cn/b/xnzx/search/info/xxfb_fg/teacher/getMobilePageList";
 const NEWS_REDIRECT_URL: &str = "https://info.tsinghua.edu.cn";
 const NEWS_DETAIL_URL: &str = "https://info.tsinghua.edu.cn/b/info/xxfb_fg/xnzx/template/detail";
+const NEWS_ATTACHMENT_URL: &str = "https://info.tsinghua.edu.cn/f/wj/openNewWindow?fileId=";
 const NEWS_ADD_FAVOR_URL: &str =
     "https://info.tsinghua.edu.cn/b/info/gxfw_fg/common/addFavorite/XXFB/";
 const NEWS_REMOVE_FAVOR_URL: &str =
@@ -845,6 +846,13 @@ op("thos.services",false,"THOS service catalogue",&[],&["page","size","keyword"]
             "getNewsDetail",
         ),
         (
+            "news.file-download",
+            false,
+            vec!["wjid", "output"],
+            vec![],
+            "wj/openNewWindow + authenticated attachment stream",
+        ),
+        (
             "news.favorites",
             false,
             vec![],
@@ -1043,6 +1051,30 @@ op("thos.services",false,"THOS service catalogue",&[],&["page","size","keyword"]
             .cloned()
             .unwrap_or_default(),
     );
+    a.extend(
+        crate::thu_services::operations()
+            .as_array()
+            .cloned()
+            .unwrap_or_default(),
+    );
+    a.extend(
+        crate::easycompute::operations()
+            .as_array()
+            .cloned()
+            .unwrap_or_default(),
+    );
+    a.extend(
+        crate::thu_classroom_reservation::operations()
+            .as_array()
+            .cloned()
+            .unwrap_or_default(),
+    );
+    a.extend(
+        crate::thu_visit::operations()
+            .as_array()
+            .cloned()
+            .unwrap_or_default(),
+    );
     a.extend(crate::wsbx::operations());
     Value::Array(a)
 }
@@ -1137,6 +1169,18 @@ pub async fn execute(session: &Session, operation: &str, a: &Value) -> Result<Va
     }
     if operation.starts_with("wsbx.") {
         return crate::wsbx::execute(session, operation, a).await;
+    }
+    if operation.starts_with("service.") {
+        return crate::thu_services::execute(session, operation, a).await;
+    }
+    if operation.starts_with("easycompute.") || operation.starts_with("paratera.") {
+        return crate::easycompute::execute(session, operation, a).await;
+    }
+    if operation.starts_with("classroom-reservation.") {
+        return crate::thu_classroom_reservation::execute(session, operation, a).await;
+    }
+    if operation.starts_with("visit.") {
+        return crate::thu_visit::execute(session, operation, a).await;
     }
     if operation.starts_with("course.") {
         return course(session, operation, a).await;
@@ -2104,6 +2148,7 @@ async fn news(session: &Session, op: &str, a: &Value) -> Result<Value> {
             )?)
         }
         "news.detail" => news_detail(c, a, &token).await,
+        "news.file-download" => news_file_download(c, a, &token).await,
         "news.favorites" => Ok(serde_json::from_str(
             &post(
                 c,
@@ -2517,6 +2562,139 @@ async fn model_chat(c: &Client, a: &Value) -> Result<Value> {
     }
     Ok(v)
 }
+fn detect_attachment_format(bytes: &[u8]) -> Option<&'static str> {
+    if bytes.starts_with(b"%PDF-") {
+        Some("pdf")
+    } else if bytes.starts_with(&[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]) {
+        Some("doc")
+    } else if bytes.starts_with(b"PK\x03\x04") {
+        Some("zip-office")
+    } else {
+        None
+    }
+}
+fn looks_like_html(bytes: &[u8]) -> bool {
+    let prefix = String::from_utf8_lossy(&bytes[..bytes.len().min(512)])
+        .trim_start()
+        .to_ascii_lowercase();
+    prefix.starts_with("<!doctype html")
+        || prefix.starts_with("<html")
+        || prefix.contains("用户登陆超时或访问内容不存在")
+}
+fn save_new_file(output: &str, bytes: &[u8]) -> Result<()> {
+    use std::io::Write;
+
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut f = options
+        .open(output)
+        .with_context(|| format!("Cannot create {output} (existing files are not overwritten)"))?;
+    if let Err(e) = f.write_all(bytes).and_then(|_| f.sync_all()) {
+        drop(f);
+        let _ = std::fs::remove_file(output);
+        return Err(e.into());
+    }
+    Ok(())
+}
+async fn news_file_download(c: &Client, a: &Value, token: &str) -> Result<Value> {
+    let wjid = s(a, "wjid")?;
+    if wjid.is_empty()
+        || wjid.len() > 128
+        || !wjid
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'))
+    {
+        bail!("wjid contains unsupported characters");
+    }
+    let output = s(a, "output")?;
+    if output.is_empty() {
+        bail!("output cannot be empty");
+    }
+    let url = reqwest::Url::parse(&format!("{NEWS_ATTACHMENT_URL}{}", encoded(&wjid, false)))?;
+    download_news_attachment(c, url, token, &output).await
+}
+async fn download_news_attachment(
+    c: &Client,
+    url: reqwest::Url,
+    token: &str,
+    output: &str,
+) -> Result<Value> {
+    const MAX_BYTES: usize = 64 * 1024 * 1024;
+    let file_id = url
+        .query_pairs()
+        .find(|(k, _)| k == "fileId")
+        .map(|(_, value)| value.into_owned())
+        .context("Attachment URL has no fileId")?;
+    let r = c.get(url).send().await?;
+    if !r.status().is_success() {
+        bail!("Download HTTP {}", r.status().as_u16());
+    }
+    if !r
+        .url()
+        .host_str()
+        .is_some_and(|h| h == "tsinghua.edu.cn" || h.ends_with(".tsinghua.edu.cn"))
+    {
+        bail!("Download redirected outside Tsinghua");
+    }
+    if r.content_length().is_some_and(|n| n > MAX_BYTES as u64) {
+        bail!("Attachment exceeds the 64 MiB safety limit");
+    }
+    let mut content_type = r
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|x| x.to_str().ok())
+        .unwrap_or("application/octet-stream")
+        .to_owned();
+    let mut bytes = r.bytes().await?;
+    if bytes.len() > MAX_BYTES {
+        bail!("Attachment exceeds the 64 MiB safety limit");
+    }
+    if content_type.to_ascii_lowercase().contains("text/html") || looks_like_html(&bytes) {
+        let html = String::from_utf8_lossy(&bytes);
+        if !html.contains("_playFile") {
+            bail!("Attachment download returned HTML; session may have expired");
+        }
+        let opened = c
+            .get(query(
+                &format!("{PDF_NEWS_PREFIX}{}", encoded(&file_id, false)),
+                &json!({"_csrf":token}),
+            )?)
+            .send()
+            .await?
+            .error_for_status()?;
+        content_type = opened
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|x| x.to_str().ok())
+            .unwrap_or("application/octet-stream")
+            .to_owned();
+        if opened
+            .content_length()
+            .is_some_and(|n| n > MAX_BYTES as u64)
+        {
+            bail!("Attachment exceeds the 64 MiB safety limit");
+        }
+        bytes = opened.bytes().await?;
+    }
+    if bytes.is_empty() {
+        bail!("Attachment response was empty");
+    }
+    let detected_format = detect_attachment_format(&bytes)
+        .unwrap_or("unknown")
+        .to_owned();
+    save_new_file(output, &bytes)?;
+    Ok(json!({
+        "output":output,
+        "bytes":bytes.len(),
+        "contentType":content_type,
+        "detectedFormat":detected_format,
+    }))
+}
 async fn news_detail(c: &Client, a: &Value, token: &str) -> Result<Value> {
     if let Ok(id) = s(a, "id") {
         return jget(
@@ -2544,19 +2722,37 @@ async fn news_detail(c: &Client, a: &Value, token: &str) -> Result<Value> {
     }
     let r = c.get(url).send().await?.error_for_status()?;
     let final_url = r.url().to_string();
-    let is_pdf = r
+    let content_type = r
         .headers()
         .get("content-type")
         .and_then(|x| x.to_str().ok())
-        .is_some_and(|x| x.contains("pdf"))
-        || final_url.ends_with(".pdf");
-    if is_pdf {
+        .unwrap_or("application/octet-stream")
+        .to_lowercase();
+    let bytes = r.bytes().await?;
+    let detected_format = detect_attachment_format(&bytes);
+    if detected_format.is_some() || (content_type.contains("pdf") && !looks_like_html(&bytes)) {
         use base64::Engine;
-        return Ok(
-            json!({"type":"pdf","encoding":"base64","content":base64::engine::general_purpose::STANDARD.encode(r.bytes().await?)}),
-        );
+        return Ok(json!({
+            "type":detected_format.unwrap_or("pdf"),
+            "contentType":content_type,
+            "encoding":"base64",
+            "content":base64::engine::general_purpose::STANDARD.encode(bytes)
+        }));
     }
-    let h = body(r).await?;
+    let h = if content_type.contains("gb") {
+        encoding_rs::GBK.decode(&bytes).0.into_owned()
+    } else {
+        String::from_utf8(bytes.to_vec())
+            .unwrap_or_else(|_| encoding_rs::GBK.decode(&bytes).0.into_owned())
+    };
+    if h.contains("needCaptcha")
+        || h.contains("用户登陆超时或访问内容不存在")
+        || h.contains("<title>清华大学WebVPN</title>")
+        || h.contains("do/off/ui/auth/login")
+        || h.contains("sm2publicKey")
+    {
+        bail!("Session expired or captcha required; refresh login/session before retrying");
+    }
     if let Ok(id) = capture(&h, r#"var xxid\s*=\s*"(.*?)";"#) {
         return jget(
             c,
@@ -2945,5 +3141,35 @@ getElementById('a2_3').innerHTML += strHTML; } initTopLocal"#;
         let (url,v)=payment_form("<form action='https://openapi.alipay.com/gateway.do'><input name='biz_content' value='value'></form>","form").unwrap();
         assert_eq!(url, "https://openapi.alipay.com/gateway.do");
         assert_eq!(v["biz_content"], "value");
+    }
+    #[test]
+    fn news_attachment_detection_handles_legacy_word() {
+        assert_eq!(
+            detect_attachment_format(&[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]),
+            Some("doc")
+        );
+        assert_eq!(detect_attachment_format(b"%PDF-1.7"), Some("pdf"));
+        assert_eq!(detect_attachment_format(b"PK\x03\x04"), Some("zip-office"));
+        assert_eq!(detect_attachment_format(b"plain text"), None);
+    }
+    #[test]
+    fn news_file_download_is_in_the_catalogue() {
+        let operations = operations();
+        let operation = operations
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|operation| operation["name"] == "news.file-download")
+            .unwrap();
+        assert_eq!(operation["mutating"], false);
+        assert_eq!(operation["required"], json!(["wjid", "output"]));
+    }
+    #[test]
+    fn news_file_writer_refuses_overwrite() {
+        let dir = tempfile::tempdir().unwrap();
+        let output = dir.path().join("attachment.doc");
+        save_new_file(output.to_str().unwrap(), b"first").unwrap();
+        assert!(save_new_file(output.to_str().unwrap(), b"second").is_err());
+        assert_eq!(std::fs::read(output).unwrap(), b"first");
     }
 }

@@ -1345,6 +1345,17 @@
       "upstream": "getNewsDetail"
     },
     {
+      "description": "wj/openNewWindow + authenticated attachment stream",
+      "mutating": false,
+      "name": "news.file-download",
+      "optional": [],
+      "required": [
+        "wjid",
+        "output"
+      ],
+      "upstream": "wj/openNewWindow + authenticated attachment stream"
+    },
+    {
       "description": "getFavorNewsList",
       "mutating": false,
       "name": "news.favorites",
@@ -2065,6 +2076,930 @@
         "provider"
       ],
       "upstream": "thu-info-lib/src/lib/card.ts"
+    },
+    {
+      "description": "List every live Info application category and its application count",
+      "mutating": false,
+      "name": "service.categories",
+      "optional": [],
+      "required": [],
+      "upstream": "getCyAppList/xsAll"
+    },
+    {
+      "description": "List the live Info application catalogue; all 300+ cards are included",
+      "mutating": false,
+      "name": "service.list",
+      "optional": [
+        "category",
+        "query",
+        "native_only",
+        "page",
+        "page_size"
+      ],
+      "required": [],
+      "upstream": "getCyAppList/xsAll"
+    },
+    {
+      "description": "Read portal metadata and safe entry-point summaries for one application",
+      "mutating": false,
+      "name": "service.info",
+      "optional": [],
+      "required": [
+        "yyfwid"
+      ],
+      "upstream": "getYyfwjs"
+    },
+    {
+      "description": "Resolve an application's SSO destinations without invoking its business APIs",
+      "mutating": false,
+      "name": "service.resolve",
+      "optional": [],
+      "required": [
+        "yyfwid"
+      ],
+      "upstream": "onlineAppRedirect"
+    },
+    {
+      "description": "Statically discover API candidates from one application's HTML and JavaScript",
+      "mutating": false,
+      "name": "service.discover",
+      "optional": [
+        "max_scripts"
+      ],
+      "required": [
+        "yyfwid"
+      ],
+      "upstream": "authenticated landing page + script assets"
+    },
+    {
+      "description": "Audit portal metadata for all matching applications and optionally run static discovery",
+      "mutating": false,
+      "name": "service.audit",
+      "optional": [
+        "category",
+        "query",
+        "native_only",
+        "limit",
+        "deep",
+        "max_scripts",
+        "concurrency"
+      ],
+      "required": [],
+      "upstream": "getYyfwjs + onlineAppRedirect + static assets"
+    },
+    {
+      "description": "Current EasyCompute account, coupon balance, access-code readiness and cluster allocations",
+      "mutating": false,
+      "name": "easycompute.account",
+      "optional": [],
+      "required": [],
+      "upstream": "easycompute.cs.tsinghua.edu.cn/auth/userInfo/query"
+    },
+    {
+      "description": "Current EasyCompute/Paratera clusters and zones used by machine creation",
+      "mutating": false,
+      "name": "easycompute.clusters",
+      "optional": [],
+      "required": [],
+      "upstream": "ai.paratera.com/platform/zone/getZoneList"
+    },
+    {
+      "description": "Exchange the EasyCompute Tsinghua code for a private Paratera session and return the account",
+      "mutating": false,
+      "name": "paratera.session",
+      "optional": [],
+      "required": [],
+      "upstream": "ai.paratera.com/platform/tsinghua/authAndGetCoupon"
+    },
+    {
+      "description": "List Paratera API access-key metadata with secrets redacted",
+      "mutating": false,
+      "name": "paratera.access-keys",
+      "optional": [
+        "page_num",
+        "page_size",
+        "account_name",
+        "payload"
+      ],
+      "required": [],
+      "upstream": "ai.paratera.com/platform/cipher/queryCiphers"
+    },
+    {
+      "description": "Create a Paratera API key and save its full response to a new private file",
+      "mutating": true,
+      "name": "paratera.access-key.create",
+      "optional": [
+        "account_name"
+      ],
+      "required": [
+        "output"
+      ],
+      "upstream": "ai.paratera.com/platform/cipher/createCipher"
+    },
+    {
+      "description": "Enable or disable one Paratera API key by ID",
+      "mutating": true,
+      "name": "paratera.access-key.status",
+      "optional": [],
+      "required": [
+        "id",
+        "enabled"
+      ],
+      "upstream": "ai.paratera.com/platform/cipher/updateCipher"
+    },
+    {
+      "description": "Delete one Paratera API key by ID",
+      "mutating": true,
+      "name": "paratera.access-key.delete",
+      "optional": [],
+      "required": [
+        "id"
+      ],
+      "upstream": "ai.paratera.com/platform/cipher/deleteCipher"
+    },
+    {
+      "description": "List Paratera container instances",
+      "mutating": false,
+      "name": "paratera.containers",
+      "optional": [
+        "payload"
+      ],
+      "required": [],
+      "upstream": "ai.paratera.com/platform/ack/service/getUserResourceContainerServiceDetailList"
+    },
+    {
+      "description": "List LLM-platform API-key metadata without exposing key material",
+      "mutating": false,
+      "name": "paratera.api-keys",
+      "optional": [
+        "page_num",
+        "page_size"
+      ],
+      "required": [],
+      "upstream": "ai.paratera.com/lms/api/key/llmSk"
+    },
+    {
+      "description": "Create one LLM-platform API key and save the one-time secret response to a private file",
+      "mutating": true,
+      "name": "paratera.api-key.create",
+      "optional": [
+        "billing_type"
+      ],
+      "required": [
+        "token_name",
+        "output"
+      ],
+      "upstream": "ai.paratera.com/lms/api/key/create"
+    },
+    {
+      "description": "Rename one LLM-platform API key by token UUID",
+      "mutating": true,
+      "name": "paratera.api-key.rename",
+      "optional": [],
+      "required": [
+        "token_uuid",
+        "token_name"
+      ],
+      "upstream": "ai.paratera.com/lms/api/key/update"
+    },
+    {
+      "description": "Enable or disable one LLM-platform API key by token UUID",
+      "mutating": true,
+      "name": "paratera.api-key.status",
+      "optional": [],
+      "required": [
+        "token_uuid",
+        "enabled"
+      ],
+      "upstream": "ai.paratera.com/lms/api/key/update"
+    },
+    {
+      "description": "Delete one LLM-platform API key by token UUID",
+      "mutating": true,
+      "name": "paratera.api-key.delete",
+      "optional": [],
+      "required": [
+        "token_uuid"
+      ],
+      "upstream": "ai.paratera.com/lms/api/key/delete"
+    },
+    {
+      "description": "Read zones, container offerings, specs, public image types, and private images without creating a machine",
+      "mutating": false,
+      "name": "paratera.container.options",
+      "optional": [
+        "spec_payload",
+        "image_payload",
+        "availability_payload"
+      ],
+      "required": [],
+      "upstream": "ai.paratera.com/platform resource/container APIs"
+    },
+    {
+      "description": "Check container price and current availability for an exact server-shaped configuration",
+      "mutating": false,
+      "name": "paratera.container.preflight",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "resourcePrice/checkContainerPrice + resourceContainerService/describeAvailableResource"
+    },
+    {
+      "description": "Build a validated container-create payload from explicit resource choices without creating it",
+      "mutating": false,
+      "name": "paratera.container.plan",
+      "optional": [
+        "billing_type",
+        "count",
+        "volumes",
+        "auto_continue",
+        "pay_period"
+      ],
+      "required": [
+        "alias_name",
+        "cluster_id",
+        "region_id",
+        "zone_id",
+        "service_model",
+        "image_uuid"
+      ],
+      "upstream": "local EasyCompute container-create contract"
+    },
+    {
+      "description": "Create one or more Paratera container machines from a fully reviewed server-shaped payload",
+      "mutating": true,
+      "name": "paratera.container.create",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "ai.paratera.com/platform/ack/service/create"
+    },
+    {
+      "description": "Call one allowlisted read-only Paratera frontend endpoint; write endpoints are refused",
+      "mutating": false,
+      "name": "paratera.read",
+      "optional": [
+        "method",
+        "query",
+        "body"
+      ],
+      "required": [
+        "base",
+        "path"
+      ],
+      "upstream": "ai.paratera.com allowlisted read API catalogue"
+    },
+    {
+      "description": "Current classroom-reservation account and private session state",
+      "mutating": false,
+      "name": "classroom-reservation.auth-status",
+      "optional": [],
+      "required": [],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/system/login/getLoginUser"
+    },
+    {
+      "description": "List classroom and meeting-room reservation scenes",
+      "mutating": false,
+      "name": "classroom-reservation.scenes",
+      "optional": [],
+      "required": [],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/site/scene/list"
+    },
+    {
+      "description": "Read one reservation scene, opening rules and booking modes",
+      "mutating": false,
+      "name": "classroom-reservation.scene-detail",
+      "optional": [],
+      "required": [
+        "uuid"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/site/scene/detail"
+    },
+    {
+      "description": "List room/site types for one reservation scene",
+      "mutating": false,
+      "name": "classroom-reservation.site-types",
+      "optional": [],
+      "required": [
+        "scene_uuid"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/site/siteType"
+    },
+    {
+      "description": "List selectable campuses, buildings, or rooms for one reservation scene",
+      "mutating": false,
+      "name": "classroom-reservation.sites",
+      "optional": [
+        "site_type",
+        "site_uuid"
+      ],
+      "required": [
+        "scene_uuid"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/site/choose"
+    },
+    {
+      "description": "Read equipment or property tags attached to one room",
+      "mutating": false,
+      "name": "classroom-reservation.room-dictionary",
+      "optional": [
+        "type_code"
+      ],
+      "required": [
+        "room_uuid"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/site/room/dict/list"
+    },
+    {
+      "description": "Read platform-recommended reservation windows",
+      "mutating": false,
+      "name": "classroom-reservation.recommend",
+      "optional": [
+        "query",
+        "payload"
+      ],
+      "required": [],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/recommend"
+    },
+    {
+      "description": "List current-day reservation availability using the exact frontend payload",
+      "mutating": false,
+      "name": "classroom-reservation.current",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/current/page"
+    },
+    {
+      "description": "List available periods for a current-day room search",
+      "mutating": false,
+      "name": "classroom-reservation.current-periods",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/current/period"
+    },
+    {
+      "description": "Read one current-day availability result and its bookable periods",
+      "mutating": false,
+      "name": "classroom-reservation.current-detail",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/current/detail"
+    },
+    {
+      "description": "List cross-day room availability",
+      "mutating": false,
+      "name": "classroom-reservation.cross-day",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/cross/page"
+    },
+    {
+      "description": "Read one cross-day availability result",
+      "mutating": false,
+      "name": "classroom-reservation.cross-day-detail",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/cross/detail"
+    },
+    {
+      "description": "List custom-time same-day room availability",
+      "mutating": false,
+      "name": "classroom-reservation.custom-current",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/custom/current/page"
+    },
+    {
+      "description": "List bookable periods for custom-time same-day availability",
+      "mutating": false,
+      "name": "classroom-reservation.custom-current-periods",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/custom/current/period"
+    },
+    {
+      "description": "Read one custom-time same-day availability result",
+      "mutating": false,
+      "name": "classroom-reservation.custom-current-detail",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/custom/current/detail"
+    },
+    {
+      "description": "List custom-time cross-day room availability",
+      "mutating": false,
+      "name": "classroom-reservation.custom-cross-day",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/custom/cross/page"
+    },
+    {
+      "description": "Read one custom-time cross-day availability result",
+      "mutating": false,
+      "name": "classroom-reservation.custom-cross-day-detail",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/custom/cross/detail"
+    },
+    {
+      "description": "Read available seats for one custom-time room slot",
+      "mutating": false,
+      "name": "classroom-reservation.custom-seats",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/custom/current/seat"
+    },
+    {
+      "description": "Find the next quick same-day reservation",
+      "mutating": false,
+      "name": "classroom-reservation.quick-current",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/quick/current"
+    },
+    {
+      "description": "Find the next quick cross-day reservation",
+      "mutating": false,
+      "name": "classroom-reservation.quick-cross-day",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/quick/cross"
+    },
+    {
+      "description": "Read quick-reservation periods",
+      "mutating": false,
+      "name": "classroom-reservation.quick-periods",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/quick/period"
+    },
+    {
+      "description": "List quick-reservation matches",
+      "mutating": false,
+      "name": "classroom-reservation.quick-page",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/quick/page"
+    },
+    {
+      "description": "Read the account's commonly used rooms",
+      "mutating": false,
+      "name": "classroom-reservation.commonly-used",
+      "optional": [
+        "query"
+      ],
+      "required": [],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/commonlyUsed"
+    },
+    {
+      "description": "Read the room equipment dictionary",
+      "mutating": false,
+      "name": "classroom-reservation.equipment",
+      "optional": [
+        "query"
+      ],
+      "required": [],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/system/dev/dict/equipment/dropDown"
+    },
+    {
+      "description": "Read a completed reservation task",
+      "mutating": false,
+      "name": "classroom-reservation.task",
+      "optional": [
+        "query"
+      ],
+      "required": [],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/complete/task"
+    },
+    {
+      "description": "Read the account's reservation groups",
+      "mutating": false,
+      "name": "classroom-reservation.groups",
+      "optional": [
+        "query"
+      ],
+      "required": [],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/user/favorite/groups/details"
+    },
+    {
+      "description": "List reservation approval workflow instances",
+      "mutating": false,
+      "name": "classroom-reservation.workflow-process",
+      "optional": [
+        "query"
+      ],
+      "required": [],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/workflow/process/list"
+    },
+    {
+      "description": "Read one reservation approval workflow instance",
+      "mutating": false,
+      "name": "classroom-reservation.workflow-info",
+      "optional": [],
+      "required": [
+        "id"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/workflow/process/{id}"
+    },
+    {
+      "description": "Read a reservation approval workflow definition summary",
+      "mutating": false,
+      "name": "classroom-reservation.workflow-brief",
+      "optional": [],
+      "required": [
+        "id"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/workflow/process/brief/{id}"
+    },
+    {
+      "description": "Read a reservation form/workflow definition",
+      "mutating": false,
+      "name": "classroom-reservation.workflow-define",
+      "optional": [],
+      "required": [
+        "id"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/workflow/define/detail/{id}"
+    },
+    {
+      "description": "List current classroom reservation records",
+      "mutating": false,
+      "name": "classroom-reservation.records",
+      "optional": [
+        "payload"
+      ],
+      "required": [],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/reserveRecord"
+    },
+    {
+      "description": "List historical classroom reservation records",
+      "mutating": false,
+      "name": "classroom-reservation.history",
+      "optional": [
+        "payload"
+      ],
+      "required": [],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/historyRecord"
+    },
+    {
+      "description": "Read one reservation detail",
+      "mutating": false,
+      "name": "classroom-reservation.detail",
+      "optional": [],
+      "required": [
+        "id"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/details"
+    },
+    {
+      "description": "Read a previous reservation as a new-booking source",
+      "mutating": false,
+      "name": "classroom-reservation.copy-source",
+      "optional": [],
+      "required": [
+        "id"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/copyResv"
+    },
+    {
+      "description": "Read the current user's reservation credit or quota",
+      "mutating": false,
+      "name": "classroom-reservation.credit",
+      "optional": [
+        "scene_uuid",
+        "page_size",
+        "page_num"
+      ],
+      "required": [],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/user/getUserCredit"
+    },
+    {
+      "description": "Read reservation locking and hold configuration",
+      "mutating": false,
+      "name": "classroom-reservation.lock-config",
+      "optional": [
+        "payload"
+      ],
+      "required": [],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/getLockConfig"
+    },
+    {
+      "description": "Read classroom reservation system configuration",
+      "mutating": false,
+      "name": "classroom-reservation.system-config",
+      "optional": [],
+      "required": [],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/system/config"
+    },
+    {
+      "description": "Call one allowlisted read-only classroom-reservation endpoint",
+      "mutating": false,
+      "name": "classroom-reservation.read",
+      "optional": [
+        "query",
+        "payload"
+      ],
+      "required": [
+        "method",
+        "path"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn allowlisted reservation API catalogue"
+    },
+    {
+      "description": "Lock a specific room/period with a reviewed frontend payload",
+      "mutating": true,
+      "name": "classroom-reservation.lock",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/lockSite"
+    },
+    {
+      "description": "Release a room/period lock with a reviewed frontend payload",
+      "mutating": true,
+      "name": "classroom-reservation.unlock",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/unLockSite"
+    },
+    {
+      "description": "Submit one current/fixed-period classroom reservation payload",
+      "mutating": true,
+      "name": "classroom-reservation.book",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/addReserve"
+    },
+    {
+      "description": "Submit one custom-time classroom reservation payload",
+      "mutating": true,
+      "name": "classroom-reservation.book-custom",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/custom/addReserve"
+    },
+    {
+      "description": "Cancel one classroom reservation by exact server-shaped payload",
+      "mutating": true,
+      "name": "classroom-reservation.cancel",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/cancelReserve"
+    },
+    {
+      "description": "Cancel one period of a classroom reservation",
+      "mutating": true,
+      "name": "classroom-reservation.cancel-period",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/cancelReserve/period"
+    },
+    {
+      "description": "Cancel selected classroom reservations in one payload",
+      "mutating": true,
+      "name": "classroom-reservation.cancel-batch",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/cancelReserveBatch"
+    },
+    {
+      "description": "Update an existing classroom reservation from a reviewed payload",
+      "mutating": true,
+      "name": "classroom-reservation.detail-update",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/details/update"
+    },
+    {
+      "description": "End an active classroom reservation early",
+      "mutating": true,
+      "name": "classroom-reservation.end-early",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/endEarly"
+    },
+    {
+      "description": "Extend an active classroom reservation using a reviewed payload",
+      "mutating": true,
+      "name": "classroom-reservation.extend",
+      "optional": [],
+      "required": [
+        "payload"
+      ],
+      "upstream": "jxlytj.tsinghua.edu.cn/site/api/reserve/extend"
+    },
+    {
+      "description": "Current temporary-visitor-reporting account and private session state",
+      "mutating": false,
+      "name": "visit.auth-status",
+      "optional": [],
+      "required": [],
+      "upstream": "visit.tsinghua.edu.cn/visitor/mbpm/identity/isAdmin"
+    },
+    {
+      "description": "Map the Info cards in the 预约入校 family to their native systems",
+      "mutating": false,
+      "name": "visit.workflows",
+      "optional": [],
+      "required": [],
+      "upstream": "Info onlineAppRedirect + current visitor frontends"
+    },
+    {
+      "description": "Use the Info application ticket to establish a read-only THOS visitor session",
+      "mutating": false,
+      "name": "visit.thos-enter",
+      "optional": [],
+      "required": [
+        "workflow"
+      ],
+      "upstream": "information-portal SSO + thos.tsinghua.edu.cn"
+    },
+    {
+      "description": "Check the existing THOS visitor session without requesting a new SSO ticket",
+      "mutating": false,
+      "name": "visit.thos-status",
+      "optional": [],
+      "required": [
+        "workflow"
+      ],
+      "upstream": "thos.tsinghua.edu.cn/fp/fp/formHome/allNum"
+    },
+    {
+      "description": "Check whether one visitor service is open and within its monthly and concurrent-application limits",
+      "mutating": false,
+      "name": "visit.thos-service-status",
+      "optional": [],
+      "required": [
+        "workflow"
+      ],
+      "upstream": "thos.tsinghua.edu.cn/fp/fp/serveapply/{checkService,checkLimittime,checkServiceSyncLimit}"
+    },
+    {
+      "description": "Read the visitor service metadata and server-generated form/process identifiers without submitting",
+      "mutating": false,
+      "name": "visit.thos-apply-info",
+      "optional": [],
+      "required": [
+        "workflow"
+      ],
+      "upstream": "thos.tsinghua.edu.cn/fp/fp/serveapply/{serveInfo,getServeApply}"
+    },
+    {
+      "description": "Open the current visitor form through THOS formParser and return a content summary without submitting",
+      "mutating": false,
+      "name": "visit.thos-form-load",
+      "optional": [
+        "seq_id",
+        "seq_pid"
+      ],
+      "required": [
+        "workflow"
+      ],
+      "upstream": "thos.tsinghua.edu.cn/fp/formParser"
+    },
+    {
+      "description": "Call one allowlisted read-only THOS visitor endpoint after SSO",
+      "mutating": false,
+      "name": "visit.thos-read",
+      "optional": [
+        "query",
+        "payload"
+      ],
+      "required": [
+        "workflow",
+        "method",
+        "path"
+      ],
+      "upstream": "thos.tsinghua.edu.cn/fp read-only API catalogue"
+    },
+    {
+      "description": "List temporary-visitor menus and form routes for the current account",
+      "mutating": false,
+      "name": "visit.menus",
+      "optional": [],
+      "required": [],
+      "upstream": "visit.tsinghua.edu.cn/visitor/mbpm/function/getAllMenus"
+    },
+    {
+      "description": "Read the current visitor portal and its available portlets",
+      "mutating": false,
+      "name": "visit.portal",
+      "optional": [],
+      "required": [],
+      "upstream": "visit.tsinghua.edu.cn/visitor/mbpm/portal/getPortlets"
+    },
+    {
+      "description": "Read unread visitor-system message and notice counters",
+      "mutating": false,
+      "name": "visit.unread-count",
+      "optional": [
+        "notices"
+      ],
+      "required": [],
+      "upstream": "visit.tsinghua.edu.cn/visitor/mbpm/message"
+    },
+    {
+      "description": "Read approval/task history for one visitor form instance",
+      "mutating": false,
+      "name": "visit.task-records",
+      "optional": [
+        "process_instance"
+      ],
+      "required": [
+        "form_did",
+        "form_tid"
+      ],
+      "upstream": "visit.tsinghua.edu.cn/visitor/mbpm/form-collaborate/getTaskRecordInfo"
+    },
+    {
+      "description": "Preload one visitor form without submitting it",
+      "mutating": false,
+      "name": "visit.form-preload",
+      "optional": [
+        "query",
+        "process_instance"
+      ],
+      "required": [
+        "form_did",
+        "form_tid"
+      ],
+      "upstream": "visit.tsinghua.edu.cn/visitor/mbpm/form/preLoad"
+    },
+    {
+      "description": "Call one allowlisted read-only temporary-visitor endpoint",
+      "mutating": false,
+      "name": "visit.read",
+      "optional": [
+        "query",
+        "payload"
+      ],
+      "required": [
+        "method",
+        "path"
+      ],
+      "upstream": "visit.tsinghua.edu.cn/visitor/mbpm allowlisted read catalogue"
+    },
+    {
+      "description": "Submit one fully reviewed visitor-reporting form payload",
+      "mutating": true,
+      "name": "visit.form-submit",
+      "optional": [
+        "form_did",
+        "form_tid"
+      ],
+      "required": [
+        "payload"
+      ],
+      "upstream": "visit.tsinghua.edu.cn/visitor/mbpm/form/submit"
     },
     {
       "description": "List supported reimbursement routes and their WSBX endpoints without network access",

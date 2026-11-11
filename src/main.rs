@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 use serde_json::{json, Value};
 use std::{fs, path::PathBuf};
 use thu_cli::{
-    app, auth, credential, learn,
+    app, auth, credential, easycompute, learn,
     session::{self, Session},
     thu,
 };
@@ -457,6 +457,11 @@ async fn run(cli: &Cli) -> Result<Value> {
                 json!({"dry_run":true,"network_request_sent":false,"operation":op,"argument_keys":args.as_object().unwrap().keys().collect::<Vec<_>>()}),
             );
         }
+        if service == "thu" {
+            if let Some(result) = easycompute::execute_offline(&call.operation, &args) {
+                return result;
+            }
+        }
         let session = Session::open(
             cli.session
                 .clone()
@@ -486,6 +491,9 @@ async fn run(cli: &Cli) -> Result<Value> {
             session.clear_profile()?;
             session.remove_private_sidecar("wsbx-auth")?;
             session.remove_private_sidecar("sports-auth")?;
+            session.remove_private_sidecar("easycompute-auth")?;
+            session.remove_private_sidecar("jxlytj-auth")?;
+            session.remove_private_sidecar("visit-auth")?;
             Ok(json!({"imported_cookies":count}))
         }
         Command::Logout { confirm } => {

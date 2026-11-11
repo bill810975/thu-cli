@@ -231,6 +231,127 @@ fn missing_local_credential_reports_status_without_exposing_secrets() {
 }
 
 #[test]
+fn easycompute_container_plan_is_offline_and_validated() {
+    let d = tempfile::tempdir().unwrap();
+    let s = d.path().join("info.json");
+    let args = r#"{"alias_name":"fixture-container","cluster_id":105,"region_id":104,"zone_id":160,"service_model":"rtx5090.xeon6530.xlarge","image_uuid":"ackci-0000qxv64"}"#;
+    let o = cli()
+        .arg("--session")
+        .arg(&s)
+        .arg("--compact")
+        .args(["thu", "paratera.container.plan", "--args", args])
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    assert!(!s.exists());
+    let v: Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["network_request_sent"], false);
+    assert_eq!(v["payload"]["billingType"], "PostPaid");
+    assert_eq!(v["payload"]["aliasName"], "fixture-container");
+}
+
+#[test]
+fn easycompute_api_key_creation_requires_confirmation_and_dry_run_is_offline() {
+    let d = tempfile::tempdir().unwrap();
+    let s = d.path().join("info.json");
+    let output = d.path().join("provider-response.json");
+    let args = serde_json::json!({
+        "token_name": "fixture-key",
+        "output": output
+    })
+    .to_string();
+    let o = cli()
+        .arg("--session")
+        .arg(&s)
+        .args(["thu", "paratera.api-key.create", "--args", &args])
+        .output()
+        .unwrap();
+    assert!(!o.status.success());
+    assert!(!s.exists());
+    assert!(String::from_utf8_lossy(&o.stderr).contains("--confirm"));
+
+    let o = cli()
+        .arg("--session")
+        .arg(&s)
+        .args([
+            "thu",
+            "paratera.api-key.create",
+            "--args",
+            &args,
+            "--dry-run",
+        ])
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    assert!(!s.exists());
+    let v: Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["network_request_sent"], false);
+    assert_eq!(v["operation"]["mutating"], true);
+}
+
+#[test]
+fn classroom_booking_requires_confirmation_and_dry_run_is_offline() {
+    let d = tempfile::tempdir().unwrap();
+    let s = d.path().join("info.json");
+    let args = r#"{"payload":{"sceneUuid":"fixture-scene","siteUuid":"fixture-room","resvKind":"CURRENT_RESERVE","reserveTime":[]}}"#;
+    let o = cli()
+        .arg("--session")
+        .arg(&s)
+        .args(["thu", "classroom-reservation.book", "--args", args])
+        .output()
+        .unwrap();
+    assert!(!o.status.success());
+    assert!(!s.exists());
+    assert!(String::from_utf8_lossy(&o.stderr).contains("--confirm"));
+
+    let o = cli()
+        .arg("--session")
+        .arg(&s)
+        .args([
+            "thu",
+            "classroom-reservation.book",
+            "--args",
+            args,
+            "--dry-run",
+        ])
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    assert!(!s.exists());
+    let v: Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["network_request_sent"], false);
+    assert_eq!(v["operation"]["mutating"], true);
+}
+
+#[test]
+fn visitor_form_submission_requires_confirmation_and_dry_run_is_offline() {
+    let d = tempfile::tempdir().unwrap();
+    let s = d.path().join("info.json");
+    let args = r#"{"payload":{"fixture":"value"}}"#;
+    let o = cli()
+        .arg("--session")
+        .arg(&s)
+        .args(["thu", "visit.form-submit", "--args", args])
+        .output()
+        .unwrap();
+    assert!(!o.status.success());
+    assert!(!s.exists());
+    assert!(String::from_utf8_lossy(&o.stderr).contains("--confirm"));
+
+    let o = cli()
+        .arg("--session")
+        .arg(&s)
+        .args(["thu", "visit.form-submit", "--args", args, "--dry-run"])
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    assert!(!s.exists());
+    let v: Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["network_request_sent"], false);
+    assert_eq!(v["operation"]["mutating"], true);
+}
+
+#[test]
 fn global_help_and_version() {
     assert!(cli().arg("--help").status().unwrap().success());
     assert!(cli().arg("--version").status().unwrap().success());
